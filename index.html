@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0E4A3B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Quran">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Quran</title>
+<style>
+:root{--bg:#F2F1E7;--surface:#FBFAF4;--ink:#10231D;--muted:#586C63;--line:#DBDED0;--primary:#0E4A3B;--band:#E3E5DA}
+@media(prefers-color-scheme:dark){:root{--bg:#0A1512;--surface:#101F1A;--ink:#ECE8D8;--muted:#9DB0A6;--line:#203429;--primary:#4FB596;--band:#16281F}}
+*{box-sizing:border-box}body{margin:0;background:var(--surface);color:var(--ink);font:16px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:25;background:var(--surface);padding-top:env(safe-area-inset-top,0px)}
+.bar{position:relative;display:flex;align-items:center;gap:4px;padding:10px 8px 6px 16px}
+h1{flex:1;margin:0;font-size:22px;font-weight:600}
+.ic{width:44px;height:44px;border:0;background:none;color:var(--ink);border-radius:50%;display:grid;place-items:center;cursor:pointer}
+.ic svg{width:24px;height:24px;fill:currentColor}
+#sb{display:none;padding:0 16px 8px}#sb.on{display:block}
+#q{width:100%;padding:10px 14px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px}
+.tabs{display:flex}
+.tab{flex:1;padding:14px 0;border:0;background:none;font:700 14px system-ui,sans-serif;letter-spacing:.04em;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer}
+.tab.on{color:var(--primary);border-color:var(--primary)}
+main{padding-bottom:env(safe-area-inset-bottom,0px)}
+.g,.r{display:flex;align-items:center;color:inherit;text-decoration:none}
+.g{justify-content:space-between;background:var(--band);padding:14px 16px;font-size:17px}
+.r{gap:16px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.r b{width:32px;text-align:center;font-size:24px;font-weight:400;flex:none}
+.r span{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.r i{font-style:normal;font-size:17px}.r small{color:var(--muted);font-size:14px}
+.r em{font-style:normal;color:var(--muted);font-size:15px}
+.r:active,.g:active{background:var(--line)}
+.del{border:0;background:none;color:var(--muted);font-size:22px;padding:8px 12px;cursor:pointer}
+.empty{padding:48px 24px;text-align:center;color:var(--muted)}
+#menu{display:none;position:absolute;top:8px;right:8px;z-index:20;min-width:200px;padding:8px 0;background:var(--surface);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+#menu.on{display:block}
+#menu button{display:block;width:100%;padding:16px 20px;border:0;background:none;color:var(--ink);font:inherit;font-size:17px;text-align:left;cursor:pointer}
+#menu button:active{background:var(--line)}
+#mscrim{display:none;position:fixed;inset:0;z-index:15}#mscrim.on{display:block}
+#panel{display:none;position:fixed;inset:0;z-index:30;background:var(--surface);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#panel.on{display:block}
+#pbody{padding:8px 16px;display:grid;gap:12px;align-content:start}
+.app{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--line);border-radius:14px;color:inherit;text-decoration:none}
+.app:active{background:var(--line)}
+.app .ai{flex:none;width:44px;height:44px;border-radius:12px;background:var(--band);color:var(--primary);display:grid;place-items:center}
+.app .ai svg{width:24px;height:24px;fill:currentColor}
+.app span{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.app i{font-style:normal;font-size:17px;font-weight:600}
+.app small{color:var(--muted);font-size:13px}
+.app .ch{width:22px;height:22px;fill:var(--muted);flex:none}
+#panel .bar{padding-left:8px}
+</style></head><body>
+<header>
+  <div class="bar">
+    <h1>Quran</h1>
+    <button class="ic" id="last" aria-label="Lanjut membaca"><svg viewBox="0 0 24 24"><path d="M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z"/></svg></button>
+    <button class="ic" id="sbtn" aria-label="Cari surat"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></button>
+    <button class="ic" id="mbtn" aria-label="Menu lainnya" aria-haspopup="true"><svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg></button>
+    <div id="menu" role="menu"><button role="menuitem" data-m="Setelan">Setelan</button><button role="menuitem" data-m="Aplikasi lainnya">Aplikasi lainnya</button></div>
+  </div>
+  <div id="sb"><input id="q" type="search" placeholder="Cari nama atau nomor surat" autocomplete="off"></div>
+  <nav class="tabs"><button class="tab on" data-t="s">SURAT</button><button class="tab" data-t="j">JUZ'</button><button class="tab" data-t="b">PENANDA</button></nav>
+</header>
+<div id="mscrim"></div>
+<section id="panel" aria-hidden="true">
+  <div class="bar">
+    <button class="ic" id="pback" aria-label="Kembali"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+    <h1 id="ptitle"></h1>
+  </div>
+  <div id="pbody"></div>
+</section>
+<main id="list"></main>
+<script src="config.js"></script>
+<script>
+const C=CFG,$=id=>document.getElementById(id);
+const SN="Al-Fatihah|Al-Baqarah|Ali 'Imran|An-Nisa'|Al-Ma'idah|Al-An'am|Al-A'raf|Al-Anfal|At-Taubah|Yunus|Hud|Yusuf|Ar-Ra'd|Ibrahim|Al-Hijr|An-Nahl|Al-Isra'|Al-Kahfi|Maryam|Taha|Al-Anbiya'|Al-Hajj|Al-Mu'minun|An-Nur|Al-Furqan|Asy-Syu'ara'|An-Naml|Al-Qasas|Al-'Ankabut|Ar-Rum|Luqman|As-Sajdah|Al-Ahzab|Saba'|Fatir|Yasin|As-Saffat|Sad|Az-Zumar|Gafir|Fussilat|Asy-Syura|Az-Zukhruf|Ad-Dukhan|Al-Jasiyah|Al-Ahqaf|Muhammad|Al-Fath|Al-Hujurat|Qaf|Az-Zariyat|At-Tur|An-Najm|Al-Qamar|Ar-Rahman|Al-Waqi'ah|Al-Hadid|Al-Mujadalah|Al-Hasyr|Al-Mumtahanah|As-Saff|Al-Jumu'ah|Al-Munafiqun|At-Tagabun|At-Talaq|At-Tahrim|Al-Mulk|Al-Qalam|Al-Haqqah|Al-Ma'arij|Nuh|Al-Jinn|Al-Muzzammil|Al-Muddassir|Al-Qiyamah|Al-Insan|Al-Mursalat|An-Naba'|An-Nazi'at|'Abasa|At-Takwir|Al-Infitar|Al-Mutaffifin|Al-Insyiqaq|Al-Buruj|At-Tariq|Al-A'la|Al-Gasyiyah|Al-Fajr|Al-Balad|Asy-Syams|Al-Lail|Ad-Duha|Asy-Syarh|At-Tin|Al-'Alaq|Al-Qadr|Al-Bayyinah|Az-Zalzalah|Al-'Adiyat|Al-Qari'ah|At-Takasur|Al-'Asr|Al-Humazah|Al-Fil|Quraisy|Al-Ma'un|Al-Kausar|Al-Kafirun|An-Nasr|Al-Lahab|Al-Ikhlas|Al-Falaq|An-Nas".split('|');
+const AR="Pembukaan|Sapi|Keluarga Imran|Wanita|Jamuan|Binatang Ternak|Tempat yang Tertinggi|Harta Rampasan Perang|Pengampunan|Yunus|Hud|Yusuf|Guruh|Ibrahim|Hijr|Lebah|Perjalanan Malam|Gua|Maryam|Taha|Para Nabi|Haji|Orang-orang Mukmin|Cahaya|Pembeda|Para Penyair|Semut|Kisah-kisah|Laba-laba|Bangsa Romawi|Luqman|Sajdah|Golongan-golongan yang Bersekutu|Saba'|Pencipta|Yasin|Barisan-barisan|Sad|Rombongan-rombongan|Yang Maha Pengampun|Yang Dijelaskan|Musyawarah|Perhiasan|Kabut|Yang Berlutut|Bukit-bukit Pasir|Muhammad|Kemenangan|Kamar-kamar|Qaf|Angin yang Menerbangkan|Bukit|Bintang|Bulan|Yang Maha Pengasih|Hari Kiamat|Besi|Perempuan yang Mengajukan Gugatan|Pengusiran|Perempuan yang Diuji|Barisan|Jumat|Orang-orang Munafik|Pengungkapan Kesalahan|Talak|Mengharamkan|Kerajaan|Pena|Hari Kiamat|Tempat-tempat Naik|Nuh|Jin|Orang yang Berselimut|Orang yang Berkemul|Hari Kiamat|Manusia|Malaikat-malaikat yang Diutus|Berita Besar|Malaikat-malaikat yang Mencabut|Ia Bermuka Masam|Menggulung|Terbelah|Orang-orang Curang|Terbelah|Gugusan Bintang|Yang Datang di Malam Hari|Yang Paling Tinggi|Hari Pembalasan|Fajar|Negeri|Matahari|Malam|Duha|Kelapangan|Buah Tin|Segumpal Darah|Kemuliaan|Bukti Nyata|Guncangan|Kuda Perang yang Berlari Kencang|Hari Kiamat|Bermegah-megahan|Masa|Pengumpat|Gajah|Suku Quraisy|Barang-barang yang Berguna|Nikmat yang Banyak|Orang-orang Kafir|Pertolongan|Gejolak Api|Ikhlas|Subuh|Manusia".split('|');
+const MADANI=new Set([2,3,4,5,8,9,13,22,24,33,47,48,49,55,57,58,59,60,61,62,63,64,65,66,76,98,99,110]);
+const cum=[];C.ay.reduce((x,y,i)=>(cum[i]=x,x+y),0);
+const pageOf=g=>{let lo=0,hi=C.ps.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(C.ps[m]<=g)lo=m;else hi=m-1}return lo+1};
+const sp=SN.map((_,i)=>pageOf(cum[i]+1));                       // halaman awal tiap surat
+const juzOf=p=>{for(let j=29;j>=0;j--)if(p>=C.juzStart[j])return j+1;return 1};
+const surahAt=p=>{let s=1;for(let i=0;i<114;i++)if(sp[i]<=p)s=i+1;return s};
+const go=p=>'mushaf.html?p='+p;
+const row=(h,n,t,sub,pg,x='')=>`<a class="r" href="${h}"><b>${n}</b><span><i>${t}</i><small>${sub}</small></span><em>${pg}</em>${x}</a>`;
+const sRow=s=>row(go(sp[s-1]),s,`Surat ${SN[s-1]} (${AR[s-1]})`,`${MADANI.has(s)?'Madaniyah':'Makkiyah'} - ${C.ay[s-1]} ayat`,sp[s-1]);
+const bm=()=>{try{return JSON.parse(localStorage.getItem('quran.bm')||'[]')}catch(e){return[]}};
+let tab='s';
+function render(){
+  const L=$('list'),q=$('q').value.trim().toLowerCase();let h='';
+  if(tab==='s'){
+    if(q){for(let s=1;s<=114;s++)if(String(s)===q||(SN[s-1]+' '+AR[s-1]).toLowerCase().includes(q))h+=sRow(s);
+      if(!h)h='<div class="empty">Surat tidak ditemukan.</div>'}
+    else{let s=1;for(let j=1;j<=30;j++){
+      h+=`<a class="g" href="${go(C.juzStart[j-1])}"><span>Juz' ${j}</span><span>${C.juzStart[j-1]}</span></a>`;
+      while(s<=114&&juzOf(sp[s-1])===j)h+=sRow(s++)}}
+  }else if(tab==='j'){
+    for(let j=1;j<=30;j++){const a=C.juzStart[j-1],b=j<30?C.juzStart[j]-1:C.total;
+      h+=row(go(a),j,`Juz' ${j}`,`Halaman ${a}–${b}`,a)}
+  }else{
+    const b=bm().sort((x,y)=>x-y);
+    h=b.length?b.map(p=>row(go(p),p,`Halaman ${p}`,`Juz' ${juzOf(p)} - Surat ${SN[surahAt(p)-1]}`,'',`<button class="del" data-p="${p}" aria-label="Hapus penanda">×</button>`)).join('')
+      :'<div class="empty">Belum ada penanda.</div>';
+  }
+  L.innerHTML=h;
+}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  tab=b.dataset.t;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));
+  if(tab!=='s'){$('sb').classList.remove('on');$('q').value=''}render();scrollTo(0,0)});
+$('sbtn').onclick=()=>{
+  if(tab!=='s')document.querySelector('[data-t=s]').click();
+  const on=$('sb').classList.toggle('on');if(on)$('q').focus();else{$('q').value='';render()}};
+$('q').oninput=render;
+const chev='<svg class="ch" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>';
+const APPS=[
+ ['Catatan Hafalan','Catat dan pantau hafalan','https://quran144surat-create.github.io/Catatan-hafalan-versi-2/','M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z'],
+ ['Kuis Murojaah','Uji dan ulang hafalan','https://quran144surat-create.github.io/Kuis-Murojaah-Versi-2/','M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z']];
+const appsHtml=APPS.map(a=>`<a class="app" href="${a[2]}" target="_blank" rel="noopener"><div class="ai"><svg viewBox="0 0 24 24"><path d="${a[3]}"/></svg></div><span><i>${a[0]}</i><small>${a[1]}</small></span>${chev}</a>`).join('');
+const menu=(on)=>{$('menu').classList.toggle('on',on);$('mscrim').classList.toggle('on',on)};
+$('mbtn').onclick=()=>menu(!$('menu').classList.contains('on'));
+$('mscrim').onclick=()=>menu(false);
+$('menu').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  menu(false);$('ptitle').textContent=b.dataset.m;$('pbody').innerHTML=b.dataset.m==='Aplikasi lainnya'?appsHtml:'';$('panel').classList.add('on');$('panel').setAttribute('aria-hidden','false')};
+$('pback').onclick=()=>{$('panel').classList.remove('on');$('panel').setAttribute('aria-hidden','true')};
+$('last').onclick=()=>{let p=1;try{p=+localStorage.getItem('quran.last')||1}catch(e){}location.href=go(p)};
+$('list').addEventListener('click',e=>{
+  const d=e.target.closest('.del');if(!d)return;e.preventDefault();
+  try{localStorage.setItem('quran.bm',JSON.stringify(bm().filter(p=>p!==+d.dataset.p)))}catch(x){}render()});
+render();
+if(location.protocol.startsWith('http')&&navigator.serviceWorker)navigator.serviceWorker.register('sw.js');
+</script></body></html>
