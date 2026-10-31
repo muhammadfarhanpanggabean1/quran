@@ -1,10 +1,10 @@
-/* Pengaturan untuk mushaf.html — gambar potret (P) & landscape (L) diambil dari repo Kuis Murojaah v3 */
+/* Pengaturan untuk mushaf.html — gambar potret (P) & landscape (L) diambil dari repo quran-pages */
 window.CFG={
   base:'https://quran144surat-create.github.io/kuis_murojaah_versi_3/',
   // Repo baru quran-pages: mode-p/juz-N/halaman.webp, mode-l/juz-N/a,b.webp (huruf kecil, tanpa spasi).
   // Daftar juz yang SUDAH diunggah ke repo baru ada di P / L. Juz di luar daftar tetap diambil dari repo lama (base di atas).
   // Setelah membuat tag di repo (mis. v1), ganti 'quran-pages/' jadi 'quran-pages@v1/'.
-  baru:{base:'https://cdn.jsdelivr.net/gh/muhammadfarhanpanggabean1/quran-pages/', P:[1], L:[]},
+  baru:{base:'https://cdn.jsdelivr.net/gh/muhammadfarhanpanggabean1/quran-pages/', P:[1], L:[1]},
   ext:'webp', pad:1, total:604,   // potret: P/juz 2/22.webp (1 halaman); landscape: L/juz 29/561,562.webp (2 halaman); juz 1 pakai 'Juz' huruf besar
   lNama:{},                      // pengecualian nama file landscape: {halamanAwalPasangan:'nama tanpa ekstensi'}
   juzStart:[1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282, 302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582], // sama dengan JUZ_PAGE_START di app kuis
@@ -22,6 +22,6 @@ CFG.src=function(p,m){
   let b=p,nama=pad(p);
   if(m==='L'){const a=p%2?p:p-1;b=Math.min(a+1,CFG.total);nama=CFG.lNama[a]||(pad(a)+','+pad(b))}
   const j=juzOf(b);
-  if(CFG.baru&&(CFG.baru[m]||[]).includes(j))return CFG.baru.base+'mode-'+m.toLowerCase()+'/juz-'+j+'/'+nama+'.'+CFG.ext;
-  return CFG.base+encodeURI(m+'/'+(j===1?'Juz ':'juz ')+j+'/'+nama+'.'+CFG.ext);
+  // Semua halaman hanya dari repo baru quran-pages (repo lama tidak dipakai lagi). Juz yang belum diunggah akan gagal dimuat.
+  return CFG.baru.base+'mode-'+m.toLowerCase()+'/juz-'+j+'/'+nama+'.'+CFG.ext;
 };
