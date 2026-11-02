@@ -1,6 +1,6 @@
 // Cache halaman/aset app ini. Nama diberi awalan 'quran-shell-' supaya hanya cache miliknya yang dibersihkan.
 // Cache 'mushaf-v1' (unduhan gambar, dipakai bersama Kuis Murojaah v3) dan cache app lain TIDAK dihapus.
-const CACHE = 'quran-shell-v7'; // naik versi: mushaf.html kini menyamakan warna latar dengan warna kertas gambar (mode terang dan gelap)
+const CACHE = 'quran-shell-v8'; // naik versi: mushaf.html kini menyamakan warna latar dengan warna kertas gambar (mode terang dan gelap); halaman selalu dicek ulang ke server
 const ASSETS = ['./', './index.html', './mushaf.html', './config.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   // simpan per file: satu file yang tidak ada tidak menggagalkan instalasi
@@ -23,7 +23,7 @@ self.addEventListener('fetch', e => {
     return;
   }
   e.respondWith(
-    fetch(r).then(res => {
+    fetch(r, { cache: 'no-cache' }).then(res => {
       if (res.ok && !res.redirected) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(r, copy)); }
       return res;
     }).catch(() => caches.match(r, { ignoreSearch: true }))
