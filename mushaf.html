@@ -20,7 +20,9 @@
 :root[data-theme=light]{--accent:#0E4A3B;--bg:#F2F1E7;--surface:#FBFAF4;--ink:#10231D;--muted:#586C63;--line:#DBDED0;--primary:#0E4A3B;--on:#F8F5E8;--gold:#EDE1BC;--goldink:#7A5D12;color-scheme:light}
 #thbtn{flex:none;padding:8px;display:grid;place-items:center}
 #thbtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
-:root[data-theme=dark] .pg{background:#1a1a1a}
+:root{--pl:#F6F0DE;--pd:#2A2519}
+.pg,.h{background:var(--pl)}
+:root[data-theme=dark] .pg,:root[data-theme=dark] .h{background:var(--pd)}
 :root[data-theme=dark] .h img{filter:invert(.9) hue-rotate(180deg)}
 body{background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
 button,select{font:600 13.5px system-ui,sans-serif;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 12px}
@@ -39,7 +41,7 @@ header{top:0;transform:translateY(-100%);display:flex;direction:rtl;align-items:
 body.ui header,body.ui #bot{transform:none;opacity:1;pointer-events:auto}
 #track{position:fixed;inset:0;display:flex;direction:rtl;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain;overscroll-behavior-y:none;touch-action:pan-x pinch-zoom}
 #track::-webkit-scrollbar{display:none}
-.pg{background:#FCEED5;flex:0 0 100%;width:100%;height:100%;position:relative;scroll-snap-align:center;scroll-snap-stop:always;display:flex;direction:rtl;text-align:center;color:var(--muted);padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.pg{flex:0 0 100%;width:100%;height:100%;position:relative;scroll-snap-align:center;scroll-snap-stop:always;display:flex;direction:rtl;text-align:center;color:var(--muted);padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
 .h{flex:1 1 0;min-width:0;height:100%;display:flex;align-items:center;justify-content:center}
 .h img{width:auto;height:100%;max-width:100%;object-fit:contain;-webkit-mask-image:linear-gradient(90deg,transparent,#000 2.5%,#000 97.5%,transparent);mask-image:linear-gradient(90deg,transparent,#000 2.5%,#000 97.5%,transparent)}
 /* Potret: perbesar gambar supaya margin putih kiri-kanan terpotong dan teks lebih besar. --pz = faktor zoom (1 = pas lebar layar seperti semula) */
@@ -48,7 +50,6 @@ body.ui header,body.ui #bot{transform:none;opacity:1;pointer-events:auto}
    --lz = zoom tinggi (1 = seluruh gambar terlihat, >1 = membesar dan header/footer ikut terpotong). --sh = lebar bayangan halaman kanan. */
 @media(orientation:landscape){
 :root{--lz:1;--sh:24vh}
-.pg{background:#FCEED5}
 .h{overflow:hidden;container-type:size}
 /* Lebar gambar mengikuti layar: tablet (rasio ~1,6) tidak lagi memotong gambar secara acak. Header (juz, surat) dan nomor halaman tetap tampil utuh. */
 .h img{width:min(100cqw,calc(var(--lz)*150.34cqh));height:auto;max-width:none;object-fit:fill;-webkit-mask-image:none;mask-image:none}
@@ -386,9 +387,21 @@ function fitImg(h,im){
   im.style.transform='translateX('+s.toFixed(1)+'px)';
 }
 addEventListener('resize',()=>loaded.forEach(h=>{const im=h.querySelector('img');if(im&&im.complete){fitImg(h,im);h.__o&&place(h)}}));
+// warna kertas mengikuti gambar: ambil dari pojok gambar, hitung hasil filter mode malam, lalu pakai untuk latar halaman
+function paperVars(c){const cl=v=>Math.max(0,Math.min(255,Math.round(v))),hx=a=>'#'+a.map(v=>cl(v).toString(16).padStart(2,'0')).join('');
+  const [r,g,b]=c.map(v=>229.5-.8*v);
+  const d=[-.574*r+1.43*g+.144*b,.426*r+.43*g+.144*b,.426*r+1.43*g-.856*b];
+  const st=document.documentElement.style;st.setProperty('--pl',hx(c));st.setProperty('--pd',hx(d))}
+function samplePaper(im){try{const w=im.naturalWidth,h=im.naturalHeight,k=Math.max(2,Math.round(w*.012)),cv=document.createElement('canvas');cv.width=cv.height=1;
+  const x=cv.getContext('2d',{willReadFrequently:true});x.imageSmoothingEnabled=true;
+  const pts=[[0,0],[w-k,0],[0,h-k],[w-k,h-k]],acc=[0,0,0];
+  pts.forEach(p=>{x.clearRect(0,0,1,1);x.drawImage(im,p[0],p[1],k,k,0,0,1,1);const d=x.getImageData(0,0,1,1).data;acc[0]+=d[0];acc[1]+=d[1];acc[2]+=d[2]});
+  const c=acc.map(v=>v/4);if(Math.max(...c)-Math.min(...c)>60)return;
+  paperVars(c);try{localStorage.setItem('quran.paper',JSON.stringify(c))}catch(e){}}catch(e){}}
+try{const sp=JSON.parse(localStorage.getItem('quran.paper')||'null');if(sp&&sp.length===3)paperVars(sp)}catch(e){}
 function loadImg(h){
   if(h.dataset.done)return;h.dataset.done=1;loaded.add(h);const n=+h.dataset.p;
-  const im=new Image();im.alt='Halaman '+n;im.addEventListener('load',()=>{h.classList.toggle('op',im.naturalHeight<1500);fitImg(h,im);window.audOv&&audOv(h,im)});
+  const im=new Image();im.alt='Halaman '+n;im.addEventListener('load',()=>{samplePaper(im);h.classList.toggle('op',im.naturalHeight<1500);fitImg(h,im);window.audOv&&audOv(h,im)});
   im.onerror=()=>{if(!im.isConnected)return;h.innerHTML='<div class="msg">Gambar halaman '+n+' tidak ditemukan.<br>Yang dicari: <code dir="ltr">'+src(n)+'</code><br>Cocokkan nama folder dan file di repo dengan <code dir="ltr">config.js</code>, atau kalau sedang offline, halaman ini belum tersimpan di perangkat<br><br><button class="retry">Coba lagi</button></div>';h.querySelector('.retry').onclick=()=>{h.replaceChildren();delete h.dataset.done;loaded.delete(h);loadImg(h)}};
   const u=src(n);try{if(new URL(u,location.href).origin!==location.origin)im.crossOrigin='anonymous'}catch(e){}
   im.src=u;h.appendChild(im);
