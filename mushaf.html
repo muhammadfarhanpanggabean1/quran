@@ -39,16 +39,16 @@ header{top:0;transform:translateY(-100%);display:flex;direction:rtl;align-items:
 body.ui header,body.ui #bot{transform:none;opacity:1;pointer-events:auto}
 #track{position:fixed;inset:0;display:flex;direction:rtl;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain;overscroll-behavior-y:none;touch-action:pan-x pinch-zoom}
 #track::-webkit-scrollbar{display:none}
-.pg{background:#fff;flex:0 0 100%;width:100%;height:100%;position:relative;scroll-snap-align:center;scroll-snap-stop:always;display:flex;direction:rtl;text-align:center;color:var(--muted);padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.pg{background:#FCEED5;flex:0 0 100%;width:100%;height:100%;position:relative;scroll-snap-align:center;scroll-snap-stop:always;display:flex;direction:rtl;text-align:center;color:var(--muted);padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
 .h{flex:1 1 0;min-width:0;height:100%;display:flex;align-items:center;justify-content:center}
 .h img{width:auto;height:100%;max-width:100%;object-fit:contain;-webkit-mask-image:linear-gradient(90deg,transparent,#000 2.5%,#000 97.5%,transparent);mask-image:linear-gradient(90deg,transparent,#000 2.5%,#000 97.5%,transparent)}
 /* Potret: perbesar gambar supaya margin putih kiri-kanan terpotong dan teks lebih besar. --pz = faktor zoom (1 = pas lebar layar seperti semula) */
-@media(orientation:portrait){:root{--pz:1.2}.h{overflow:hidden;container-type:size}.h img{width:min(calc(100cqw * var(--pz)),calc(75.17cqh));max-width:none;max-height:none;height:auto;object-fit:fill}.h.op img{width:min(calc(100cqw * var(--pz)),calc(70.97cqh))}}
+@media(orientation:portrait){:root{--pz:1.12}.h{overflow:hidden;container-type:size}.h img{width:min(calc(100cqw * var(--pz)),calc(75.17cqh));max-width:none;max-height:none;height:auto;object-fit:fill}.h.op img{width:min(calc(100cqw * var(--pz)),calc(70.97cqh))}}
 /* Landscape (buku terbuka) bergaya app Quran Android: bayangan lipatan, garis tengah, nuansa krem, header dan footer gambar tetap tampil.
    --lz = zoom tinggi (1 = seluruh gambar terlihat, >1 = membesar dan header/footer ikut terpotong). --sh = lebar bayangan halaman kanan. */
 @media(orientation:landscape){
 :root{--lz:1;--sh:24vh}
-.pg{background:#fff}
+.pg{background:#FCEED5}
 .h{overflow:hidden;container-type:size}
 /* Lebar gambar mengikuti layar: tablet (rasio ~1,6) tidak lagi memotong gambar secara acak. Header (juz, surat) dan nomor halaman tetap tampil utuh. */
 .h img{width:min(100cqw,calc(var(--lz)*150.34cqh));height:auto;max-width:none;object-fit:fill;-webkit-mask-image:none;mask-image:none}
@@ -373,9 +373,22 @@ const track=$('track'),mq=matchMedia('(orientation:landscape)');
 let spread=mq.matches,cells={},loaded=new Set(),loadObs,curObs,rz=false,curUrl=null,ftgt=0;
 const start=n=>spread?(n%2?n:n-1):n;
 
+// Potret: bingkai gambar mushaf tidak di tengah (margin jilid sempit, margin luar lebar; ganjil dan genap bergantian),
+// jadi zoom dari tengah memotong bingkai dan judul di satu sisi. Gambar digeser supaya bingkai + judul tepat di tengah layar.
+// CX = pusat bingkai + judul dalam piksel gambar (lebar asli 759): halaman ganjil / genap. Hanya untuk gambar baru (kelas op) di mode potret.
+const CX={odd:346,even:409};
+function fitImg(h,im){
+  if(!im.naturalWidth)return;
+  if(spread||!h.classList.contains('op')){im.style.transform='';return}
+  const w=im.offsetWidth,cw=h.clientWidth,lim=Math.abs(w-cw)/2;
+  let s=(im.naturalWidth/2-(+h.dataset.p%2?CX.odd:CX.even))*w/im.naturalWidth;
+  s=Math.max(-lim,Math.min(lim,s)); // jangan sampai tepi gambar masuk ke layar (celah kosong)
+  im.style.transform='translateX('+s.toFixed(1)+'px)';
+}
+addEventListener('resize',()=>loaded.forEach(h=>{const im=h.querySelector('img');if(im&&im.complete){fitImg(h,im);h.__o&&place(h)}}));
 function loadImg(h){
   if(h.dataset.done)return;h.dataset.done=1;loaded.add(h);const n=+h.dataset.p;
-  const im=new Image();im.alt='Halaman '+n;im.addEventListener('load',()=>{h.classList.toggle('op',im.naturalHeight<1500);window.audOv&&audOv(h,im)});
+  const im=new Image();im.alt='Halaman '+n;im.addEventListener('load',()=>{h.classList.toggle('op',im.naturalHeight<1500);fitImg(h,im);window.audOv&&audOv(h,im)});
   im.onerror=()=>{if(!im.isConnected)return;h.innerHTML='<div class="msg">Gambar halaman '+n+' tidak ditemukan.<br>Yang dicari: <code dir="ltr">'+src(n)+'</code><br>Cocokkan nama folder dan file di repo dengan <code dir="ltr">config.js</code>, atau kalau sedang offline, halaman ini belum tersimpan di perangkat<br><br><button class="retry">Coba lagi</button></div>';h.querySelector('.retry').onclick=()=>{h.replaceChildren();delete h.dataset.done;loaded.delete(h);loadImg(h)}};
   const u=src(n);try{if(new URL(u,location.href).origin!==location.origin)im.crossOrigin='anonymous'}catch(e){}
   im.src=u;h.appendChild(im);
