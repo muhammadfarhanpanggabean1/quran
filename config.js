@@ -3,8 +3,8 @@ window.CFG={
   base:'https://quran144surat-create.github.io/kuis_murojaah_versi_3/',
   // Repo baru quran-pages: mode-p/juz-N/halaman.webp, mode-l/juz-N/a,b.webp (huruf kecil, tanpa spasi).
   // Daftar juz yang SUDAH diunggah ke repo baru ada di P / L. Juz di luar daftar tetap diambil dari repo lama (base di atas).
-  // Setelah membuat tag di repo (mis. v1), ganti 'quran-pages/' jadi 'quran-pages@v1/'.
-  baru:{base:'https://cdn.jsdelivr.net/gh/muhammadfarhanpanggabean1/quran-pages/', P:[1], L:[1]},
+  // Alamat memakai tag @v2 supaya cache CDN dan cache aplikasi terlewati. Setiap kali gambar di repo diganti: buat tag baru (v3, v4, ...) lalu ubah angka di base.
+  baru:{base:'https://cdn.jsdelivr.net/gh/muhammadfarhanpanggabean1/quran-pages@v2/', P:[1,2], L:[1,2]},
   ext:'webp', pad:1, total:604,   // potret: P/juz 2/22.webp (1 halaman); landscape: L/juz 29/561,562.webp (2 halaman); juz 1 pakai 'Juz' huruf besar
   lNama:{},                      // pengecualian nama file landscape: {halamanAwalPasangan:'nama tanpa ekstensi'}
   juzStart:[1, 22, 42, 62, 82, 102, 122, 142, 162, 182, 202, 222, 242, 262, 282, 302, 322, 342, 362, 382, 402, 422, 442, 462, 482, 502, 522, 542, 562, 582], // sama dengan JUZ_PAGE_START di app kuis
