@@ -20,7 +20,7 @@
 :root[data-theme=light]{--accent:#0E4A3B;--bg:#F2F1E7;--surface:#FBFAF4;--ink:#10231D;--muted:#586C63;--line:#DBDED0;--primary:#0E4A3B;--on:#F8F5E8;--gold:#EDE1BC;--goldink:#7A5D12;color-scheme:light}
 #thbtn{flex:none;padding:8px;display:grid;place-items:center}
 #thbtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
-:root{--pl:#F6F0DE;--pd:#2A2519}
+:root{--pl:#EDDFC2;--pd:#3D321B}
 .pg,.h{background:var(--pl)}
 :root[data-theme=dark] .pg,:root[data-theme=dark] .h{background:var(--pd)}
 :root[data-theme=dark] .h img{filter:invert(.9) hue-rotate(180deg)}
@@ -392,11 +392,13 @@ function paperVars(c){const cl=v=>Math.max(0,Math.min(255,Math.round(v))),hx=a=>
   const [r,g,b]=c.map(v=>229.5-.8*v);
   const d=[-.574*r+1.43*g+.144*b,.426*r+.43*g+.144*b,.426*r+1.43*g-.856*b];
   const st=document.documentElement.style;st.setProperty('--pl',hx(c));st.setProperty('--pd',hx(d))}
-function samplePaper(im){try{const w=im.naturalWidth,h=im.naturalHeight,k=Math.max(2,Math.round(w*.012)),cv=document.createElement('canvas');cv.width=cv.height=1;
+function samplePaper(im){try{const w=im.naturalWidth,h=im.naturalHeight,k=Math.max(3,Math.round(w*.012)),o=Math.round(w*.006),cv=document.createElement('canvas');cv.width=cv.height=1;
   const x=cv.getContext('2d',{willReadFrequently:true});x.imageSmoothingEnabled=true;
-  const pts=[[0,0],[w-k,0],[0,h-k],[w-k,h-k]],acc=[0,0,0];
-  pts.forEach(p=>{x.clearRect(0,0,1,1);x.drawImage(im,p[0],p[1],k,k,0,0,1,1);const d=x.getImageData(0,0,1,1).data;acc[0]+=d[0];acc[1]+=d[1];acc[2]+=d[2]});
-  const c=acc.map(v=>v/4);if(Math.max(...c)-Math.min(...c)>60)return;
+  const pts=[[o,o],[w-k-o,o],[o,h-k-o],[w-k-o,h-k-o]],cs=[];
+  pts.forEach(p=>{x.clearRect(0,0,1,1);x.drawImage(im,p[0],p[1],k,k,0,0,1,1);const d=x.getImageData(0,0,1,1).data;if(d[3]>200)cs.push([d[0],d[1],d[2]])});
+  // abaikan tepi putih/abu-abu polos (bukan warna kertas) dan nilai yang tidak konsisten
+  const ok=cs.filter(c=>Math.max(...c)-Math.min(...c)>=18&&Math.max(...c)<252);if(!ok.length)return;
+  const c=[0,1,2].map(i=>{const v=ok.map(q=>q[i]).sort((a,b)=>a-b);return v[v.length>>1]});
   paperVars(c);try{localStorage.setItem('quran.paper',JSON.stringify(c))}catch(e){}}catch(e){}}
 try{const sp=JSON.parse(localStorage.getItem('quran.paper')||'null');if(sp&&sp.length===3)paperVars(sp)}catch(e){}
 function loadImg(h){
