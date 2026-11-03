@@ -20,7 +20,7 @@
 :root[data-theme=light]{--accent:#0E4A3B;--bg:#F2F1E7;--surface:#FBFAF4;--ink:#10231D;--muted:#586C63;--line:#DBDED0;--primary:#0E4A3B;--on:#F8F5E8;--gold:#EDE1BC;--goldink:#7A5D12;color-scheme:light}
 #thbtn{flex:none;padding:8px;display:grid;place-items:center}
 #thbtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
-:root{--pl:#EDDFC2;--pd:#3D321B}
+:root{--pl:#FFFFFF;--pd:#1A1A1A}
 .pg,.h{background:var(--pl)}
 :root[data-theme=dark] .pg,:root[data-theme=dark] .h{background:var(--pd)}
 :root[data-theme=dark] .h img{filter:invert(.9) hue-rotate(180deg)}
@@ -54,7 +54,7 @@ body.ui header,body.ui #bot{transform:none;opacity:1;pointer-events:auto}
 /* Lebar gambar mengikuti layar: tablet (rasio ~1,6) tidak lagi memotong gambar secara acak. Header (juz, surat) dan nomor halaman tetap tampil utuh. */
 .h img{width:min(100cqw,calc(var(--lz)*var(--ar,1.5034)*100cqh));height:auto;max-width:none;object-fit:fill;-webkit-mask-image:none;mask-image:none}
 .h.op img{width:min(100cqw,calc(var(--ar,1.4195)*100cqh))}
-.h::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background-color:rgba(255,236,170,.07);background-image:linear-gradient(90deg,transparent calc(50% - 9vh),rgba(0,0,0,.10) calc(50% - 1px),rgba(0,0,0,.45) calc(50% - 1px),rgba(0,0,0,.45) calc(50% + 1px),rgba(0,0,0,.20) calc(50% + 1px),transparent calc(50% + var(--sh)))}
+.h::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background-color:transparent;background-image:linear-gradient(90deg,transparent calc(50% - 9vh),rgba(0,0,0,.10) calc(50% - 1px),rgba(0,0,0,.45) calc(50% - 1px),rgba(0,0,0,.45) calc(50% + 1px),rgba(0,0,0,.20) calc(50% + 1px),transparent calc(50% + var(--sh)))}
 }
 @media(orientation:landscape){:root[data-theme=dark] .h::before{background-color:transparent;background-image:linear-gradient(90deg,transparent calc(50% - 9vh),rgba(0,0,0,.25) calc(50% - 1px),rgba(255,255,255,.28) calc(50% - 1px),rgba(255,255,255,.28) calc(50% + 1px),rgba(0,0,0,.45) calc(50% + 1px),transparent calc(50% + var(--sh)))}}
 .msg{max-width:340px;padding:0 16px;direction:ltr}
@@ -397,7 +397,7 @@ function samplePaper(im){try{const w=im.naturalWidth,h=im.naturalHeight,k=Math.m
   const pts=[[o,o],[w-k-o,o],[o,h-k-o],[w-k-o,h-k-o]],cs=[];
   pts.forEach(p=>{x.clearRect(0,0,1,1);x.drawImage(im,p[0],p[1],k,k,0,0,1,1);const d=x.getImageData(0,0,1,1).data;if(d[3]>200)cs.push([d[0],d[1],d[2]])});
   // abaikan tepi putih/abu-abu polos (bukan warna kertas) dan nilai yang tidak konsisten
-  const ok=cs.filter(c=>Math.max(...c)-Math.min(...c)>=18&&Math.max(...c)<252);if(!ok.length)return;
+  const ok=cs;if(!ok.length)return;
   const c=[0,1,2].map(i=>{const v=ok.map(q=>q[i]).sort((a,b)=>a-b);return v[v.length>>1]});
   paperVars(c);try{localStorage.setItem('quran.paper',JSON.stringify(c))}catch(e){}}catch(e){}}
 try{const sp=JSON.parse(localStorage.getItem('quran.paper')||'null');if(sp&&sp.length===3)paperVars(sp)}catch(e){}
