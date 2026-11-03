@@ -1,0 +1,65 @@
+name: Ekstrak Zip
+
+# Cara pakai: upload file .zip ke folder "unggah/" di repo.
+# Isi zip diekstrak ke root repo (struktur folder di dalam zip dipertahankan),
+# lalu file zip-nya dihapus.
+
+on:
+  push:
+    paths:
+      - 'unggah/*.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: ekstrak-zip
+  cancel-in-progress: false
+
+jobs:
+  ekstrak:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ambil repo
+        uses: actions/checkout@v4
+
+      - name: Ekstrak semua zip di unggah/
+        run: |
+          shopt -s nullglob
+          zips=(unggah/*.zip)
+          if [ ${#zips[@]} -eq 0 ]; then
+            echo "Tidak ada zip di unggah/"
+            exit 0
+          fi
+          for z in "${zips[@]}"; do
+            echo "Mengekstrak: $z"
+            unzip -o -q "$z" -x '__MACOSX/*' '*/.DS_Store' '.DS_Store' -d .
+            git rm -q -f -- "$z"
+          done
+
+      - name: Commit hasil ekstrak
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Tidak ada perubahan"
+            exit 0
+          fi
+          git commit -q -m "Ekstrak zip otomatis [skip ci]"
+          git pull --rebase -q || true
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      # Commit oleh bot tidak memicu workflow lain, jadi foto-json dijalankan manual di sini.
+      # Hapus langkah ini kalau tidak dipakai. foto-json.yml harus punya "workflow_dispatch:" di bagian on:.
+      - name: Jalankan workflow Perbarui foto.json
+        if: steps.commit.outputs.changed == 'true' && hashFiles('.github/workflows/foto-json.yml') != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run foto-json.yml
