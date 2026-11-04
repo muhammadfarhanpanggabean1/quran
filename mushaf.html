@@ -527,9 +527,32 @@ function cvDraw(){
   V.under.style.background=cvGrad(back,M,W,H,[[-.5,'rgba(0,0,0,0)'],[0,'rgba(0,0,0,'+(.34*fa).toFixed(3)+')'],[Math.min(90,d*.5),'rgba(0,0,0,0)']]);
   if(V.cy!==V.cyT&&!V.anim&&!cvF)cvF=requestAnimationFrame(()=>{cvF=0;cvDraw()});
 }
+// Suara kertas "Lembut" saat halaman berpindah. Dibuat langsung dengan Web Audio (tanpa file). Bawaan mati; saklarnya di Setelan index.html (quran.curlsnd).
+// Tidak berbunyi saat murattal sedang diputar (window.curlMurattal) supaya tidak mengganggu bacaan.
+let fsC=null;
+const fsOn=()=>{try{return localStorage.getItem('quran.curlsnd')==='1'}catch(e){return false}};
+function fsLayer(c,out,t,o){
+  const n=Math.floor(c.sampleRate*o.d),b=c.createBuffer(1,n,c.sampleRate),a=b.getChannelData(0),k=o.crackle||0;
+  for(let i=0;i<n;i++){const r=Math.random()*2-1;a[i]=k?(Math.random()<k?r:r*.1):r}
+  const s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain(),d=o.d;
+  s.buffer=b;f.type=o.type||'bandpass';f.Q.value=o.q;
+  f.frequency.setValueAtTime(o.f0,t);f.frequency.exponentialRampToValueAtTime(o.f1,t+d);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(o.a,t+o.att);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+  s.connect(f);f.connect(g);g.connect(out);s.start(t);s.stop(t+d);
+}
+function fsPlay(){
+  if(!fsOn()||(window.curlMurattal&&window.curlMurattal()))return;
+  try{
+    const c=fsC||(fsC=new(window.AudioContext||window.webkitAudioContext)());
+    if(c.state==='suspended')c.resume();
+    const t=c.currentTime+.02,m=c.createGain();m.gain.value=.7;m.connect(c.destination);
+    fsLayer(c,m,t,{d:.5,f0:1500,f1:4800,q:.6,a:.55,att:.14});
+    fsLayer(c,m,t+.06,{d:.36,type:'highpass',f0:3500,f1:7000,q:.8,a:.1,att:.1,crackle:.02});
+  }catch(e){}
+}
 // animasikan p ke 0 (batal) atau 1 (selesai)
 function cvAnim(to,dur){
-  const V=CV;if(!V)return;cancelAnimationFrame(cvRaf);V.anim=1;
+  const V=CV;if(!V)return;if(to===1)fsPlay();cancelAnimationFrame(cvRaf);V.anim=1;
   const p0=V.p,t0=performance.now(),D=Math.max(220,dur*Math.abs(to-p0));
   const f=now=>{
     if(CV!==V)return;
@@ -1371,6 +1394,7 @@ function fromCache(u,my){
 var W={ctx:null,fail:false,act:false,paused:false,q:[],tEnd:0,sim:null,gen:0,topping:false,buf:new Map(),dp:new Map(),chk:0};
 let sw=false; // sedang mengganti mesin: abaikan peristiwa jeda dari elemen audio
 function isPaused(){return W&&W.act?W.paused:A.paused}
+window.curlMurattal=()=>act&&!isPaused(); // dipakai suara balik halaman: diam hanya saat murattal benar-benar diputar
 function waInit(){
   if(W.ctx||W.fail)return;
   try{

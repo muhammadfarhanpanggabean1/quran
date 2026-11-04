@@ -55,6 +55,7 @@ main{padding-bottom:env(safe-area-inset-bottom,0px)}
 #panel .bar{padding-left:8px}
 .set{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--line);border-radius:14px;cursor:pointer;position:relative}
 .set:active{background:var(--line)}
+.set.off{opacity:.5;cursor:default}
 .set .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .set .tx i{font-style:normal;font-size:17px;font-weight:600}
 .set .tx small{color:var(--muted);font-size:13px}
@@ -133,12 +134,14 @@ const APPS=[
 const appsHtml=APPS.map(a=>`<a class="app" href="${a[2]}" target="_blank" rel="noopener"><div class="ai"><svg viewBox="0 0 24 24"><path d="${a[3]}"/></svg></div><span><i>${a[0]}</i><small>${a[1]}</small></span>${chev}</a>`).join('');
 // Setelan: efek balik halaman mushaf (page curl). Dibaca mushaf.html lewat localStorage 'quran.curl'; bawaan aktif.
 const curlGet=()=>{try{return localStorage.getItem('quran.curl')!=='0'}catch(e){return true}};
-const setHtml='<label class="set"><span class="tx"><i>Efek balik halaman</i><small>Halaman melengkung seperti buku asli saat berpindah</small></span><input type="checkbox" id="curlsw" role="switch"><span class="tg"></span></label>';
+const sndGet=()=>{try{return localStorage.getItem('quran.curlsnd')==='1'}catch(e){return false}};
+const rowHtml=(id,t,d)=>'<label class="set" id="r_'+id+'"><span class="tx"><i>'+t+'</i><small>'+d+'</small></span><input type="checkbox" id="'+id+'" role="switch"><span class="tg"></span></label>';
+const setHtml=rowHtml('curlsw','Efek balik halaman','Halaman melengkung seperti buku asli saat berpindah')+rowHtml('curlsnd','Suara balik halaman','Desir kertas lembut saat halaman berpindah');
 const menu=(on)=>{$('menu').classList.toggle('on',on);$('mscrim').classList.toggle('on',on)};
 $('mbtn').onclick=()=>menu(!$('menu').classList.contains('on'));
 $('mscrim').onclick=()=>menu(false);
 $('menu').onclick=e=>{const b=e.target.closest('button');if(!b)return;
-  menu(false);$('ptitle').textContent=b.dataset.m;$('pbody').innerHTML=b.dataset.m==='Aplikasi lainnya'?appsHtml:b.dataset.m==='Setelan'?setHtml:'';if(b.dataset.m==='Setelan'){const sw=$('curlsw');sw.checked=curlGet();sw.onchange=()=>{try{localStorage.setItem('quran.curl',sw.checked?'1':'0')}catch(x){}}}$('panel').classList.add('on');$('panel').setAttribute('aria-hidden','false')};
+  menu(false);$('ptitle').textContent=b.dataset.m;$('pbody').innerHTML=b.dataset.m==='Aplikasi lainnya'?appsHtml:b.dataset.m==='Setelan'?setHtml:'';if(b.dataset.m==='Setelan'){const sw=$('curlsw'),sn=$('curlsnd'),paint=()=>{sn.disabled=!sw.checked;$('r_curlsnd').classList.toggle('off',!sw.checked)};sw.checked=curlGet();sn.checked=sndGet();paint();sw.onchange=()=>{try{localStorage.setItem('quran.curl',sw.checked?'1':'0')}catch(x){}paint()};sn.onchange=()=>{try{localStorage.setItem('quran.curlsnd',sn.checked?'1':'0')}catch(x){}}}$('panel').classList.add('on');$('panel').setAttribute('aria-hidden','false')};
 $('pback').onclick=()=>{$('panel').classList.remove('on');$('panel').setAttribute('aria-hidden','true')};
 $('last').onclick=()=>{let p=1;try{p=+localStorage.getItem('quran.last')||1}catch(e){}location.href=go(p)};
 $('list').addEventListener('click',e=>{
