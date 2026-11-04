@@ -248,7 +248,6 @@ body.ui #bk{display:none}
 #curl .cm>.pg,#curl .cb>.pg{position:absolute;inset:0;width:100%;height:100%}
 #curl .cf{overflow:hidden;background:var(--pl);transform-origin:0 0;will-change:transform,clip-path}
 :root[data-theme=dark] #curl .cf{background:var(--pd)}
-#curl .cw{filter:drop-shadow(0 0 7px rgba(0,0,0,.42))}
 #curl .cb{opacity:.3}
 #curl .cb.mir{opacity:1;transform:scaleX(-1)}
 </style></head><body>
@@ -483,45 +482,54 @@ function cvGrad(d,M,W,H,stops){
   const L=Math.abs(W*d[0])+Math.abs(H*d[1]),a=Math.atan2(d[0],-d[1])*180/Math.PI,s0=(M[0]-W/2)*d[0]+(M[1]-H/2)*d[1]+L/2;
   return 'linear-gradient('+a.toFixed(2)+'deg,'+stops.map(x=>x[1]+' '+(s0+x[0]).toFixed(1)+'px').join(',')+')';
 }
-// dir: +1 maju (halaman terangkat dari kiri), -1 mundur (dari kanan). y: posisi jari (null = dari tombol/keyboard)
-function cvStart(dir,y){
+// dir: +1 maju, -1 mundur. y: posisi jari (null = dari tombol/keyboard). g: jarak jari dari tepi tempat ia memegang halaman.
+// Geometri selalu sama: halaman di atas terangkat dari pojok kirinya dan dilipat ke kanan, lalu q (0..1) = seberapa jauh lipatan berjalan.
+// Maju: halaman sekarang yang terangkat (q = p). Mundur: kebalikan waktunya, halaman sebelumnya datang dari kanan (q = 1 - p), jadi
+// yang bergerak adalah halaman sebelumnya yang menutupi halaman sekarang, persis seperti membalik buku ke belakang.
+function cvStart(dir,y,g){
   if(cvBusy)return false;
   const st=spread?2:1,c0=start(cur),t=c0+dir*st;
   if(t<1||t>T||!cells[c0]||!cells[t])return false;
-  const r=track.getBoundingClientRect(),W=r.width,H=r.height;
+  const r=track.getBoundingClientRect(),W=r.width,H=r.height,fw=dir>0;
   const mk=(cls,kid)=>{const d=document.createElement('div');d.className=cls;if(kid){const k=kid.cloneNode(true);k.querySelectorAll('img').forEach(i=>{i.decoding='sync'});d.appendChild(k)}return d};
   const el=document.createElement('div');el.id='curl';
-  const under=mk('cu'),mid=mk('cm',cells[c0]),cw=mk('cw'),flap=mk('cf'),cb=mk('cb'+(spread?' mir':''),spread?cells[t]:cells[c0]),cg=mk('cg');
+  // lapisan atas = halaman yang dilipat; punggung lipatan: landscape = halaman di sisi baliknya (dicerminkan), potret = bayangan tembus halaman itu sendiri
+  const top=cells[fw?c0:t],bk=spread?cells[fw?t:c0]:top;
+  const under=mk('cu'),mid=mk('cm',top),cw=mk('cw'),flap=mk('cf'),cb=mk('cb'+(spread?' mir':''),bk),cg=mk('cg');
   flap.append(cb,cg);cw.append(flap);el.append(under,mid,cw);document.body.appendChild(el);
-  const cy=y==null||y>H/2?H:0;
-  CV={el,under,mid,cw,flap,cg,dir,t,c0,W,H,ws:spread?W/2:W,cy,fy:y==null?(cy?H*.68:H*.32):y,p:0,auto:y==null};
+  const cyT=y==null||y>H/2?H:0;
+  CV={el,under,mid,cw,flap,cg,dir,t,c0,W,H,ws:spread?W/2:W,cy:cyT,cyT,fy:y==null?(cyT?H*.68:H*.32):y,p:0,g:g||0,auto:y==null,anim:0};
   cvBusy=1;cvDraw();
-  cells[t].scrollIntoView({behavior:'instant',inline:'center',block:'nearest'});
+  if(fw)cells[t].scrollIntoView({behavior:'instant',inline:'center',block:'nearest'}); // mundur: jalur tetap di halaman sekarang sampai selesai
   return true;
 }
 function cvDraw(){
   const V=CV;if(!V)return;
-  const {p,W,H,ws,dir,cy}=V,cx=dir>0?0:W;
-  const ex=cx+dir*2*ws*p,ey=cy+(V.fy-cy)*(1-p)*Math.min(1,p*4)*.6;
-  const dx=ex-cx,dy=ey-cy,d=Math.hypot(dx,dy);
+  const {W,H,ws}=V,q=V.dir>0?V.p:1-V.p;
+  V.cy=Math.abs(V.cyT-V.cy)<.5?V.cyT:V.cy+(V.cyT-V.cy)*.3;   // pojok asal berpindah halus antara atas dan bawah mengikuti jari
+  const cy=V.cy,ex=2*ws*q,ey=cy+(V.fy-cy)*(1-q)*Math.min(1,q*4)*.6;
+  const dy=ey-cy,d=Math.hypot(ex,dy);
   if(d<1){V.mid.style.clipPath='none';V.cw.style.display=V.under.style.display='none';return}
   V.cw.style.display=V.under.style.display='';
-  const n=[dx/d,dy/d],M=[(cx+ex)/2,(cy+ey)/2];
-  const sheet=dir>0?[[0,0],[ws,0],[ws,H],[0,H]]:[[W-ws,0],[W,0],[W,H],[W-ws,H]];
+  const n=[ex/d,dy/d],M=[ex/2,(cy+ey)/2];
+  const sheet=[[0,0],[ws,0],[ws,H],[0,H]];
   const orig=cvHalf(sheet,M,n,-1),rest=cvHalf(sheet,M,n,1);
-  const other=spread?(dir>0?[[ws,0],[W,0],[W,H],[ws,H]]:[[0,0],[ws,0],[ws,H],[0,H]]):null;
+  const other=spread?[[ws,0],[W,0],[W,H],[ws,H]]:null;
   V.mid.style.clipPath=cvPath(other?[rest,other]:[rest]);
   V.flap.style.clipPath=cvPath([orig]);
   const k=2*(n[0]*M[0]+n[1]*M[1]);
   V.flap.style.transform='matrix('+[1-2*n[0]*n[0],-2*n[0]*n[1],-2*n[0]*n[1],1-2*n[1]*n[1],k*n[0],k*n[1]].map(v=>v.toFixed(5)).join(',')+')';
-  const back=[-n[0],-n[1]];
-  V.cg.style.background=cvGrad(back,M,W,H,[[-.5,'rgba(0,0,0,0)'],[0,'rgba(0,0,0,.26)'],[Math.min(70,d*.4),'rgba(0,0,0,0)']]);
+  // bayangan menguat saat lipatan terbentuk dan melemah saat hampir rata atau selesai
+  const fa=Math.min(1,q*8)*Math.min(1,(1-q)*5),back=[-n[0],-n[1]];
+  V.cw.style.filter='drop-shadow('+(n[0]*3).toFixed(1)+'px '+(n[1]*3).toFixed(1)+'px 7px rgba(0,0,0,'+(.42*fa).toFixed(3)+'))';
+  V.cg.style.background=cvGrad(back,M,W,H,[[-.5,'rgba(0,0,0,0)'],[0,'rgba(0,0,0,'+(.26*fa).toFixed(3)+')'],[Math.min(70,d*.4),'rgba(0,0,0,0)']]);
   V.under.style.clipPath=cvPath([orig]);
-  V.under.style.background=cvGrad(back,M,W,H,[[-.5,'rgba(0,0,0,0)'],[0,'rgba(0,0,0,.34)'],[Math.min(90,d*.5),'rgba(0,0,0,0)']]);
+  V.under.style.background=cvGrad(back,M,W,H,[[-.5,'rgba(0,0,0,0)'],[0,'rgba(0,0,0,'+(.34*fa).toFixed(3)+')'],[Math.min(90,d*.5),'rgba(0,0,0,0)']]);
+  if(V.cy!==V.cyT&&!V.anim&&!cvF)cvF=requestAnimationFrame(()=>{cvF=0;cvDraw()});
 }
 // animasikan p ke 0 (batal) atau 1 (selesai)
 function cvAnim(to,dur){
-  const V=CV;if(!V)return;cancelAnimationFrame(cvRaf);
+  const V=CV;if(!V)return;cancelAnimationFrame(cvRaf);V.anim=1;
   const p0=V.p,t0=performance.now(),D=Math.max(220,dur*Math.abs(to-p0));
   const f=now=>{
     if(CV!==V)return;
@@ -554,6 +562,7 @@ track.addEventListener('pointerdown',e=>{
   if(!curlOn()||cvBusy||!e.isPrimary||e.button>0)return;
   cvD={id:e.pointerId,x:e.clientX,y:e.clientY,m:0,lx:e.clientX,lt:e.timeStamp,v:0,dir:0};
 });
+const cvG=(dir,x)=>{const W=track.clientWidth,ws=spread?W/2:W;return Math.max(14,Math.min(.18*ws,dir>0?x:W-x))};
 track.addEventListener('pointermove',e=>{
   const D=cvD;if(!D||e.pointerId!==D.id)return;
   if(!D.m){
@@ -561,12 +570,21 @@ track.addEventListener('pointermove',e=>{
     if(Math.hypot(dx,dy)<10)return;
     if(Math.abs(dx)<Math.abs(dy)*1.2){D.m=2;return}
     D.dir=dx>0?1:-1;
-    if(!cvStart(D.dir,D.y)){D.m=2;return}
-    D.m=1;D.x=e.clientX;D.lx=e.clientX;D.lt=e.timeStamp;
+    if(!cvStart(D.dir,D.y,cvG(D.dir,D.x))){D.m=2;return}
+    D.m=1;D.lx=e.clientX;D.lt=e.timeStamp;
     try{track.setPointerCapture(e.pointerId)}catch(x){}
   }
   const V=CV;if(D.m!==1||!V)return;
-  V.fy=e.clientY;V.p=Math.max(0,Math.min(1,(e.clientX-D.x)*D.dir/(V.ws*1.1)));
+  // p dihitung dari jarak jari: lipatan berjalan searah jari, dan selesai tepat saat jari sudah menempuh satu lebar halaman
+  const raw=(V.g+(e.clientX-D.x)*D.dir*(2*V.ws-V.g)/V.ws)/(2*V.ws);
+  if(raw<-.06){ // jari berbalik arah melewati titik awal: ganti ke arah sebaliknya
+    cvEnd(false);D.dir=-D.dir;D.x=e.clientX;D.y=e.clientY;D.v=0;D.lx=e.clientX;D.lt=e.timeStamp;
+    if(!cvStart(D.dir,e.clientY,cvG(D.dir,e.clientX)))D.m=2;
+    return;
+  }
+  V.fy=e.clientY;V.p=Math.max(0,Math.min(1,raw));
+  // pojok asal (atas/bawah) mengikuti jari dengan histeresis supaya tidak bolak-balik
+  if(V.cyT>0&&e.clientY<V.H*.4)V.cyT=0;else if(V.cyT===0&&e.clientY>V.H*.6)V.cyT=V.H;
   const dt=e.timeStamp-D.lt;if(dt>0)D.v=.7*D.v+.3*((e.clientX-D.lx)*D.dir/dt);
   D.lx=e.clientX;D.lt=e.timeStamp;
   if(!cvF)cvF=requestAnimationFrame(()=>{cvF=0;cvDraw()});
