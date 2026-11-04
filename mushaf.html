@@ -240,23 +240,17 @@ body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #bk:active{opacity:.9}
 #bk svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;display:block}
 body.ui #bk{display:none}
-/* ===== Efek balik halaman (page curl): hanya aktif saat #track punya kelas flip ===== */
-#track.flip{display:block;overflow:hidden;scroll-snap-type:none;touch-action:pinch-zoom}
-/* buku dicerminkan (scaleX -1) supaya library yang berarah kiri-ke-kanan membalik halaman ke arah kanan (RTL); isi halaman dicerminkan lagi di .mir */
-#book{position:absolute;inset:0;margin:auto;direction:ltr;transform:scaleX(-1)}
-#book .stf__wrapper{position:absolute;inset:0;width:100%;height:100%;padding:0}
-#book .stf__wrapper::after{display:none}
-#book .stf__block{position:absolute;inset:0;width:100%;height:100%}
-#book .stf__item{position:absolute}
-#book .stf__outerShadow,#book .stf__innerShadow,#book .stf__hardShadow,#book .stf__hardInnerShadow{position:absolute;left:0;top:0;pointer-events:none}
-.fp{background:var(--pl);overflow:hidden}
-:root[data-theme=dark] .fp{background:var(--pd)}
-.mir{position:absolute;inset:0;overflow:hidden;transform:scaleX(-1)}
-#track.flip .pg{flex:none;position:absolute;top:0;left:0;width:100%;height:100%;scroll-snap-align:none}
-/* landscape: tiap sisi buku memuat spread penuh selebar 2x, digeser supaya hanya separuhnya tampak (ganjil = separuh kanan, genap = separuh kiri) */
-@media(orientation:landscape){#track.flip .pg{width:200%}#track.flip .fp.odd .pg{left:auto;right:0}#track.flip .fp.even .pg{left:0}}
-/* selama halaman berputar, kotak ayat tidak menerima sentuhan */
-body.flipping .ao i{pointer-events:none!important}
+/* Efek balik halaman (page curl): aktif lewat Setelan di index.html (quran.curl). Saat aktif, geseran ditangani skrip, bukan gulir bawaan. */
+[data-curl="1"] #track{overflow-x:hidden;touch-action:pinch-zoom}
+#curl{position:fixed;inset:0;z-index:4;overflow:hidden;pointer-events:none}
+#curl *{pointer-events:none!important}
+#curl .cu,#curl .cm,#curl .cw,#curl .cf,#curl .cb,#curl .cg{position:absolute;inset:0}
+#curl .cm>.pg,#curl .cb>.pg{position:absolute;inset:0;width:100%;height:100%}
+#curl .cf{overflow:hidden;background:var(--pl);transform-origin:0 0;will-change:transform,clip-path}
+:root[data-theme=dark] #curl .cf{background:var(--pd)}
+#curl .cw{filter:drop-shadow(0 0 7px rgba(0,0,0,.42))}
+#curl .cb{opacity:.3}
+#curl .cb.mir{opacity:1;transform:scaleX(-1)}
 </style></head><body>
 <header>
   <a id="homebtn" href="index.html" aria-label="Kembali ke halaman awal"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5M5 10v10h5v-6h4v6h5V10"/></svg></a>
@@ -270,7 +264,6 @@ body.flipping .ao i{pointer-events:none!important}
   <button id="qbtn" aria-label="Pilih qori"></button>
   <button id="alastbtn" aria-label="Lanjutkan murattal dari ayat terakhir" hidden></button>
   <button id="dlbtn" aria-label="Simpan untuk offline"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg><span>Unduh untuk offline</span></button>
-  <button id="flipbtn" aria-label="Efek balik halaman"><svg viewBox="0 0 24 24"><path d="M5 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM17 8l2-1v13"/></svg><span></span></button>
   <button id="reye"></button>
 </div>
 <div id="nav" class="scrim" hidden><div class="sheet" role="dialog" aria-label="Pindah halaman">
@@ -353,13 +346,9 @@ body.flipping .ao i{pointer-events:none!important}
   </div>
   <div id="brow"><button id="rcfg" class="rb" aria-label="Pengaturan rekaman"></button><div id="ind"></div><button id="rfab" class="rb" aria-label="Rekam bacaan"></button></div>
 </div>
-<script id="pfjs" src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js" async></script>
 <script src="config.js"></script>
 <script>
 const C=CFG,$=id=>document.getElementById(id),T=C.total,src=C.src;
-// Efek balik halaman (page curl). Mati bila ?flip=0, dipilih mati di menu ⋯, atau library CDN tidak termuat
-const flipPref=()=>{try{const q=new URLSearchParams(location.search).get('flip');if(q==='0'||q==='1')localStorage.setItem('quran.flip',q);return localStorage.getItem('quran.flip')!=='0'}catch(e){return true}};
-const flipOn=()=>!!(window.St&&window.St.PageFlip)&&flipPref();
 const juzOf=p=>{for(let j=29;j>=0;j--)if(p>=C.juzStart[j])return j+1;return 1};
 function pageOfAyah(s,a){
   const g=C.ay.slice(0,s-1).reduce((x,y)=>x+y,0)+a;let lo=0,hi=T-1;
@@ -394,9 +383,6 @@ function hlShow(k,p){
 
 const track=$('track'),mq=matchMedia('(orientation:landscape)');
 let spread=mq.matches,cells={},loaded=new Set(),loadObs,curObs,rz=false,curUrl=null,ftgt=0;
-let pf=null,book=null,bw=0,bh=0,dragUntil=0; // pf = objek StPageFlip (null = mode scroll lama)
-// ukuran/posisi .h bisa nol saat halaman disembunyikan library: hitung ulang begitu .h tampil
-const fro=window.ResizeObserver?new ResizeObserver(es=>es.forEach(e=>{const h=e.target,im=h.querySelector('img');if(im&&im.complete&&im.naturalWidth){fitImg(h,im);h.__o&&place(h)}})):null;
 const start=n=>spread?(n%2?n:n-1):n;
 
 // Potret: bingkai gambar mushaf tidak di tengah (margin jilid sempit, margin luar lebar; ganjil dan genap bergantian),
@@ -405,11 +391,11 @@ const start=n=>spread?(n%2?n:n-1):n;
 const CX={odd:346,even:409};
 function fitImg(h,im){
   if(!im.naturalWidth)return;
-  if(spread||!h.classList.contains('op')){im.style.transform='';im.__tx=0;return}
+  if(spread||!h.classList.contains('op')){im.style.transform='';return}
   const w=im.offsetWidth,cw=h.clientWidth,lim=Math.abs(w-cw)/2;
   let s=(im.naturalWidth/2-(+h.dataset.p%2?CX.odd:CX.even))*w/im.naturalWidth;
   s=Math.max(-lim,Math.min(lim,s)); // jangan sampai tepi gambar masuk ke layar (celah kosong)
-  im.style.transform='translateX('+s.toFixed(1)+'px)';im.__tx=s;
+  im.style.transform='translateX('+s.toFixed(1)+'px)';
 }
 addEventListener('resize',()=>loaded.forEach(h=>{const im=h.querySelector('img');if(im&&im.complete){fitImg(h,im);h.__o&&place(h)}}));
 // warna kertas mengikuti gambar: ambil dari pojok gambar, hitung hasil filter mode malam, lalu pakai untuk latar halaman
@@ -435,7 +421,7 @@ function loadImg(h){
 }
 // buang gambar yang sudah jauh dari halaman aktif supaya memori tidak menumpuk
 addEventListener('online',()=>[...loaded].forEach(h=>{const b=h.querySelector('.retry');b&&b.click()}));
-function unloadFar(){loaded.forEach(h=>{if(Math.abs(+h.dataset.p-cur)>(pf?6:12)){h.replaceChildren();delete h.dataset.done;loaded.delete(h)}})}
+function unloadFar(){loaded.forEach(h=>{if(Math.abs(+h.dataset.p-cur)>12){h.replaceChildren();delete h.dataset.done;loaded.delete(h)}})}
 // Penanda (bookmark) & posisi terakhir dibaca — disimpan di localStorage,
 // dipakai bersama oleh index.html (tab PENANDA, tombol "Lanjut membaca").
 const bm=()=>{try{return JSON.parse(localStorage.getItem('quran.bm')||'[]')}catch(e){return[]}};
@@ -463,62 +449,152 @@ function setCur(n){
   try{localStorage.setItem('quran.last',n)}catch(e){}
   syncBm(n);
   window.recSync&&recSync(n);
-  pf&&loadAround(n);
   unloadFar();
 }
 function goto(n,smooth){
-  if(pf){ // mode flip: halaman bersebelahan dibalik berefek, selain itu langsung pindah
-    const c=start(Math.max(1,Math.min(T,n))),st=spread?2:1;
-    if(c===cur)return;
-    if(smooth&&Math.abs(c-cur)===st)c>cur?pf.flipNext('bottom'):pf.flipPrev('bottom'); // setCur dipanggil event 'flip'
-    else{pf.turnToPage(c-1);setCur(c)}
-    return;
-  }
   const c=cells[start(n)];
+  if(curlGo(n,smooth))return;
   if(c)c.scrollIntoView({behavior:smooth?'smooth':'instant',inline:'center',block:'nearest'});
 }
-// mode flip: muat gambar halaman aktif dan beberapa di sekitarnya saja (potret +-3 halaman, landscape +-2 spread)
-function loadAround(c){const r=spread?4:3;for(const k in cells)if(Math.abs(+k-c)<=r)cells[k].querySelectorAll('.h').forEach(loadImg)}
+// ---------- Efek balik halaman (page curl) ----------
+// Aktif/mati lewat Setelan di index.html (kunci quran.curl, bawaan aktif). Mati = geser dan pindah halaman seperti biasa.
+// Cara kerja: jalur halaman asli digulir ke halaman tujuan, lalu lapisan #curl (salinan halaman sekarang) dilipat di atasnya.
+// Setelah selesai lapisan dibuang dan setCur() dipanggil, jadi kotak ayat, audio, rekaman, dan penanda tidak tersentuh.
+const rmq=matchMedia('(prefers-reduced-motion: reduce)');
+const curlOn=()=>{try{if(localStorage.getItem('quran.curl')==='0')return false}catch(e){}return !rmq.matches};
+let cvBusy=0,CV=null,cvD=null,cvSup=0,cvRaf=0,cvF=0;
+function curlSync(){const on=curlOn();document.documentElement.dataset.curl=on?'1':'0';if(!on)curlAbort()}
+addEventListener('storage',e=>{if(e.key==='quran.curl'||e.key===null)curlSync()});
+rmq.addEventListener('change',curlSync);
+addEventListener('resize',()=>curlAbort());
+// potong poligon konveks dengan setengah bidang: simpan titik x dengan side*dot(x-M,n) >= 0
+function cvHalf(poly,M,n,side){
+  const out=[],len=poly.length,f=q=>side*((q[0]-M[0])*n[0]+(q[1]-M[1])*n[1]);
+  for(let i=0;i<len;i++){
+    const a=poly[i],b=poly[(i+1)%len],da=f(a),db=f(b);
+    if(da>=0)out.push(a);
+    if((da>=0)!==(db>=0)){const k=da/(da-db);out.push([a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k])}
+  }
+  return out;
+}
+const cvPath=ps=>'path("'+(ps.filter(q=>q.length>2).map(q=>'M'+q.map(v=>v[0].toFixed(1)+' '+v[1].toFixed(1)).join('L')+'Z').join('')||'M0 0Z')+'")';
+// gradien searah d yang mulai dari titik M (geser off px); stops = [[jarak px, warna], ...]
+function cvGrad(d,M,W,H,stops){
+  const L=Math.abs(W*d[0])+Math.abs(H*d[1]),a=Math.atan2(d[0],-d[1])*180/Math.PI,s0=(M[0]-W/2)*d[0]+(M[1]-H/2)*d[1]+L/2;
+  return 'linear-gradient('+a.toFixed(2)+'deg,'+stops.map(x=>x[1]+' '+(s0+x[0]).toFixed(1)+'px').join(',')+')';
+}
+// dir: +1 maju (halaman terangkat dari kiri), -1 mundur (dari kanan). y: posisi jari (null = dari tombol/keyboard)
+function cvStart(dir,y){
+  if(cvBusy)return false;
+  const st=spread?2:1,c0=start(cur),t=c0+dir*st;
+  if(t<1||t>T||!cells[c0]||!cells[t])return false;
+  const r=track.getBoundingClientRect(),W=r.width,H=r.height;
+  const mk=(cls,kid)=>{const d=document.createElement('div');d.className=cls;if(kid){const k=kid.cloneNode(true);k.querySelectorAll('img').forEach(i=>{i.decoding='sync'});d.appendChild(k)}return d};
+  const el=document.createElement('div');el.id='curl';
+  const under=mk('cu'),mid=mk('cm',cells[c0]),cw=mk('cw'),flap=mk('cf'),cb=mk('cb'+(spread?' mir':''),spread?cells[t]:cells[c0]),cg=mk('cg');
+  flap.append(cb,cg);cw.append(flap);el.append(under,mid,cw);document.body.appendChild(el);
+  const cy=y==null||y>H/2?H:0;
+  CV={el,under,mid,cw,flap,cg,dir,t,c0,W,H,ws:spread?W/2:W,cy,fy:y==null?(cy?H*.68:H*.32):y,p:0,auto:y==null};
+  cvBusy=1;cvDraw();
+  cells[t].scrollIntoView({behavior:'instant',inline:'center',block:'nearest'});
+  return true;
+}
+function cvDraw(){
+  const V=CV;if(!V)return;
+  const {p,W,H,ws,dir,cy}=V,cx=dir>0?0:W;
+  const ex=cx+dir*2*ws*p,ey=cy+(V.fy-cy)*(1-p)*Math.min(1,p*4)*.6;
+  const dx=ex-cx,dy=ey-cy,d=Math.hypot(dx,dy);
+  if(d<1){V.mid.style.clipPath='none';V.cw.style.display=V.under.style.display='none';return}
+  V.cw.style.display=V.under.style.display='';
+  const n=[dx/d,dy/d],M=[(cx+ex)/2,(cy+ey)/2];
+  const sheet=dir>0?[[0,0],[ws,0],[ws,H],[0,H]]:[[W-ws,0],[W,0],[W,H],[W-ws,H]];
+  const orig=cvHalf(sheet,M,n,-1),rest=cvHalf(sheet,M,n,1);
+  const other=spread?(dir>0?[[ws,0],[W,0],[W,H],[ws,H]]:[[0,0],[ws,0],[ws,H],[0,H]]):null;
+  V.mid.style.clipPath=cvPath(other?[rest,other]:[rest]);
+  V.flap.style.clipPath=cvPath([orig]);
+  const k=2*(n[0]*M[0]+n[1]*M[1]);
+  V.flap.style.transform='matrix('+[1-2*n[0]*n[0],-2*n[0]*n[1],-2*n[0]*n[1],1-2*n[1]*n[1],k*n[0],k*n[1]].map(v=>v.toFixed(5)).join(',')+')';
+  const back=[-n[0],-n[1]];
+  V.cg.style.background=cvGrad(back,M,W,H,[[-.5,'rgba(0,0,0,0)'],[0,'rgba(0,0,0,.26)'],[Math.min(70,d*.4),'rgba(0,0,0,0)']]);
+  V.under.style.clipPath=cvPath([orig]);
+  V.under.style.background=cvGrad(back,M,W,H,[[-.5,'rgba(0,0,0,0)'],[0,'rgba(0,0,0,.34)'],[Math.min(90,d*.5),'rgba(0,0,0,0)']]);
+}
+// animasikan p ke 0 (batal) atau 1 (selesai)
+function cvAnim(to,dur){
+  const V=CV;if(!V)return;cancelAnimationFrame(cvRaf);
+  const p0=V.p,t0=performance.now(),D=Math.max(220,dur*Math.abs(to-p0));
+  const f=now=>{
+    if(CV!==V)return;
+    const k=Math.max(0,Math.min(1,(now-t0)/D)),e=V.auto?(k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2):1-Math.pow(1-k,3);
+    V.p=p0+(to-p0)*e;cvDraw();
+    if(k<1)cvRaf=requestAnimationFrame(f);else cvEnd(to===1);
+  };
+  cvRaf=requestAnimationFrame(f);
+}
+function cvEnd(commit){
+  const V=CV;if(!V)return;
+  CV=null;cvBusy=0;cancelAnimationFrame(cvRaf);cancelAnimationFrame(cvF);cvF=0;
+  const go=commit?V.t:V.c0;
+  if(cells[go])cells[go].scrollIntoView({behavior:'instant',inline:'center',block:'nearest'});
+  V.el.remove();
+  if(commit)setCur(V.t);
+}
+function curlAbort(){if(CV)cvEnd(false)}
+// dipanggil goto(): true = efek curl dijalankan (hanya untuk pindah ke halaman/layar tepat di sebelah)
+function curlGo(n,smooth){
+  if(cvBusy){if(smooth)return true;cvEnd(false);return false}
+  if(!smooth||!curlOn()||document.hidden)return false;
+  const st=spread?2:1,c0=start(cur),t=start(n);
+  if(t===c0)return true;
+  if(Math.abs(t-c0)!==st||!cvStart(t>c0?1:-1,null))return false;
+  cvAnim(1,720);return true;
+}
+// seret dengan jari/mouse: kanan = maju (searah mushaf Arab), kiri = mundur
+track.addEventListener('pointerdown',e=>{
+  if(!curlOn()||cvBusy||!e.isPrimary||e.button>0)return;
+  cvD={id:e.pointerId,x:e.clientX,y:e.clientY,m:0,lx:e.clientX,lt:e.timeStamp,v:0,dir:0};
+});
+track.addEventListener('pointermove',e=>{
+  const D=cvD;if(!D||e.pointerId!==D.id)return;
+  if(!D.m){
+    const dx=e.clientX-D.x,dy=e.clientY-D.y;
+    if(Math.hypot(dx,dy)<10)return;
+    if(Math.abs(dx)<Math.abs(dy)*1.2){D.m=2;return}
+    D.dir=dx>0?1:-1;
+    if(!cvStart(D.dir,D.y)){D.m=2;return}
+    D.m=1;D.x=e.clientX;D.lx=e.clientX;D.lt=e.timeStamp;
+    try{track.setPointerCapture(e.pointerId)}catch(x){}
+  }
+  const V=CV;if(D.m!==1||!V)return;
+  V.fy=e.clientY;V.p=Math.max(0,Math.min(1,(e.clientX-D.x)*D.dir/(V.ws*1.1)));
+  const dt=e.timeStamp-D.lt;if(dt>0)D.v=.7*D.v+.3*((e.clientX-D.lx)*D.dir/dt);
+  D.lx=e.clientX;D.lt=e.timeStamp;
+  if(!cvF)cvF=requestAnimationFrame(()=>{cvF=0;cvDraw()});
+});
+const cvUp=e=>{
+  const D=cvD;if(!D||e.pointerId!==D.id)return;cvD=null;
+  if(D.m!==1)return;
+  cvSup=1;setTimeout(()=>{cvSup=0},80);
+  const V=CV;if(!V)return;
+  cvAnim(e.type==='pointerup'&&(D.v>.4||(V.p>.33&&D.v>-.25))?1:0,560);
+};
+track.addEventListener('pointerup',cvUp);track.addEventListener('pointercancel',cvUp);
+// fase capture: seretan tidak ikut memicu ketukan; ketuk di tepi kiri/kanan membalik halaman
+track.addEventListener('click',e=>{
+  if(cvSup){e.stopPropagation();e.preventDefault();return}
+  if(!curlOn()||cvBusy||!$('ash').hidden||e.target.closest('button,select'))return;
+  const x=e.clientX,W=innerWidth,dir=x<W*.12?1:x>W*.88?-1:0;
+  if(!dir)return;
+  const t=start(cur)+dir*(spread?2:1);
+  if(t<1||t>T)return;
+  e.stopPropagation();e.preventDefault();goto(t,true);
+},true);
+curlSync();
+
 // Urutan DOM = urutan baca Arab (direction:rtl): elemen pertama ada di paling KANAN.
 // Mode 2 halaman: ganjil di kanan, genap di kiri (1|2, 3|4, ...).
-// pilih mode: page curl bila library termuat dan tidak dimatikan, selain itu scroll lama
-function build(){flipOn()?buildFlip():buildScroll()}
-// satu "sel" mewakili satu spread (landscape: dua sisi buku) supaya hlShow/shown/follow tetap bisa memakainya
-const cellOf=(...els)=>({els,querySelectorAll:q=>els.flatMap(e=>[...e.querySelectorAll(q)]),getBoundingClientRect:()=>els[0].getBoundingClientRect()});
-function buildFlip(){
-  loadObs&&loadObs.disconnect();curObs&&curObs.disconnect();fro&&fro.disconnect();
-  if(pf){try{pf.destroy()}catch(e){}pf=null}
-  document.body.classList.remove('flipping');
-  track.replaceChildren();cells={};loaded.clear();track.classList.add('flip');
-  const W=track.clientWidth,H=track.clientHeight,pw=spread?Math.floor(W/2):W;
-  bw=W;bh=H;
-  book=document.createElement('div');book.id='book';
-  book.style.width=pw*(spread?2:1)+'px';book.style.height=H+'px';
-  track.appendChild(book);
-  // tiap sisi buku: .fp (diatur library) > .mir (cermin balik) > .pg > .h  (isi .pg/.h sama persis dengan mode scroll)
-  const items=[],mk=(i,cls)=>{
-    const fp=document.createElement('div');fp.className='fp '+cls;
-    const m=document.createElement('div');m.className='mir';
-    const d=document.createElement('div');d.className='pg';d.dataset.p=i;
-    const h=document.createElement('div');h.className='h';h.dataset.p=i;
-    d.appendChild(h);m.appendChild(d);fp.appendChild(m);items.push(fp);fro&&fro.observe(h);return fp;
-  };
-  for(let i=1;i<=T;i+=spread?2:1){
-    if(spread){const a=mk(i,'odd'),b=i+1<=T?mk(i,'even'):null;cells[i]=b?cellOf(a,b):cellOf(a)}
-    else cells[i]=cellOf(mk(i,'one'));
-  }
-  const c=start(cur);
-  pf=new St.PageFlip(book,{width:pw,height:H,size:'fixed',autoSize:false,usePortrait:!spread,showCover:false,
-    drawShadow:true,maxShadowOpacity:.5,flippingTime:700,startPage:c-1,mobileScrollSupport:false,
-    useMouseEvents:false,showPageCorners:false,disableFlipByClick:true,swipeDistance:10});
-  pf.loadFromHTML(items);
-  pf.on('flip',()=>{const n=start(pf.getCurrentPageIndex()+1);if(n!==cur)setCur(n)});
-  pf.on('changeState',e=>document.body.classList.toggle('flipping',e.data!=='read'));
-  setCur(c);
-}
-function buildScroll(){
-  if(pf){try{pf.destroy()}catch(e){}pf=null;book=null;document.body.classList.remove('flipping')}
-  fro&&fro.disconnect();track.classList.remove('flip');
+function build(){
+  curlAbort();
   loadObs&&loadObs.disconnect();curObs&&curObs.disconnect();
   track.replaceChildren();cells={};loaded.clear();
   const step=spread?2:1,frag=document.createDocumentFragment();
@@ -530,7 +606,7 @@ function buildScroll(){
   }
   track.appendChild(frag);
   loadObs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.querySelectorAll('.h').forEach(loadImg)}),{root:track,rootMargin:'0px 100% 0px 100%'});
-  curObs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting&&!rz)setCur(+e.target.dataset.p)}),{root:track,threshold:0.6});
+  curObs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting&&!rz&&!cvBusy)setCur(+e.target.dataset.p)}),{root:track,threshold:0.6});
   const c=start(cur);
   cells[c].querySelectorAll('.h').forEach(loadImg);
   setCur(c);goto(c,false);
@@ -538,14 +614,9 @@ function buildScroll(){
   requestAnimationFrame(()=>goto(cur,false));
 }
 build();
-// library CDN (async) bisa tiba setelah build pertama: pindah ke mode flip begitu siap
-{const t=$('pfjs');if(t&&!(window.St&&window.St.PageFlip))t.addEventListener('load',()=>{if(flipOn())build()})}
 mq.addEventListener('change',()=>{spread=mq.matches;build()});
 // Ukuran layar berubah (fullscreen masuk/keluar, bilah sistem, rotasi): tahan pergantian halaman aktif sampai ukuran stabil, lalu ratakan ulang sekali
-let rt;const hold=()=>{
-  // mode flip: bangun ulang buku hanya bila ukuran layar benar-benar berubah; halaman aktif dipertahankan
-  if(pf){clearTimeout(rt);rt=setTimeout(()=>{if(Math.abs(track.clientWidth-bw)>1||Math.abs(track.clientHeight-bh)>1)build()},200);return}
-  rz=true;clearTimeout(rt);rt=setTimeout(()=>{goto(ftgt||cur,false);requestAnimationFrame(()=>{rz=false;
+let rt;const hold=()=>{rz=true;clearTimeout(rt);rt=setTimeout(()=>{goto(ftgt||cur,false);requestAnimationFrame(()=>{rz=false;
   // pergantian halaman yang tertahan selama rz tidak pernah dilaporkan observer: sinkronkan 'cur' dengan halaman di tengah layar
   const el=document.elementFromPoint(innerWidth/2,innerHeight/2),pg=el&&el.closest&&el.closest('.pg');if(pg&&+pg.dataset.p!==cur)setCur(+pg.dataset.p)})},200)};
 addEventListener('resize',hold);
@@ -559,35 +630,6 @@ $('asel').onchange=e=>{const s1=+$('ssel').value,a1=+e.target.value,p=pageOfAyah
 // Tekan lama / seret gambar halaman tidak memunculkan menu bawaan browser
 track.addEventListener('contextmenu',e=>e.preventDefault());
 track.addEventListener('dragstart',e=>e.preventDefault());
-// Seret halaman (mode flip): arah ditentukan arah seretan; koordinat dicerminkan karena buku dicerminkan (RTL)
-{
-  let dr=null;
-  const bpos=e=>{const r=book.getBoundingClientRect();return{x:r.width-(e.clientX-r.left),y:e.clientY-r.top}};
-  track.addEventListener('pointerdown',e=>{
-    if(!pf||!e.isPrimary||(e.pointerType==='mouse'&&e.button>0))return;
-    dr={id:e.pointerId,x:e.clientX,y:e.clientY,on:false};
-  });
-  track.addEventListener('pointermove',e=>{
-    if(!pf||!dr||e.pointerId!==dr.id)return;
-    const dx=e.clientX-dr.x,dy=e.clientY-dr.y;
-    if(!dr.on){
-      if(Math.hypot(dx,dy)<10)return;
-      if(Math.abs(dy)>Math.abs(dx)*1.4){dr=null;return} // vertikal: untuk kecerahan, bukan balik halaman
-      dr.on=true;try{track.setPointerCapture(e.pointerId)}catch(x){}
-      // geser ke kanan = halaman berikutnya (maju); mulai dari tepi yang sesuai supaya library memilih arah yang benar
-      const p=bpos(e);pf.startUserTouch({x:dx>0?book.clientWidth-1:1,y:p.y});
-    }
-    pf.userMove(bpos(e),true);
-  });
-  const up=e=>{
-    if(!pf||!dr||e.pointerId!==dr.id)return;
-    const on=dr.on;dr=null;
-    if(on){pf.userStop(bpos(e));dragUntil=Date.now()+400}
-  };
-  track.addEventListener('pointerup',up);track.addEventListener('pointercancel',up);
-  // seretan tidak ikut dihitung sebagai ketukan
-  track.addEventListener('click',e=>{if(Date.now()<dragUntil){e.stopPropagation();e.preventDefault()}},true);
-}
 // Ketuk layar -> tampilkan/sembunyikan bilah. Geser halaman tidak memicu ketukan.
 let firstTap=true;
 track.addEventListener('click',e=>{
@@ -607,10 +649,6 @@ addEventListener('keydown',e=>{
 const navSheet=$('nav'),menu=$('menu'),more=$('morebtn');
 const setMenu=o=>{menu.hidden=!o;more.setAttribute('aria-expanded',o)};
 more.onclick=()=>setMenu(menu.hidden);
-// Tombol "Efek balik halaman": simpan pilihan hidup/mati dan langsung terapkan
-const flipBtn=$('flipbtn'),flipLbl=()=>{const on=flipPref();flipBtn.classList.toggle('on',on);flipBtn.querySelector('span').textContent='Efek balik halaman: '+(on?'hidup':'mati')};
-flipBtn.onclick=()=>{try{localStorage.setItem('quran.flip',flipPref()?'0':'1')}catch(e){}flipLbl();build()};
-flipLbl();
 menu.addEventListener('click',e=>{if(e.target.closest('button'))setMenu(false)});
 // ketukan di luar menu hanya menutup menu, tidak ikut menyembunyikan bilah
 document.addEventListener('click',e=>{if(!menu.hidden&&!e.target.closest('#menu,#morebtn')){e.stopPropagation();setMenu(false)}},true);
@@ -1525,10 +1563,9 @@ const pr={};
 const getBoxes=m=>pr[m]||(pr[m]=fetch('ayah-boxes-'+m+'.json').then(r=>r.ok?r.json():r.status===404?{}:Promise.reject()).catch(()=>{delete pr[m];return{}}));
 function place(h){
   const o=h.__o;if(!o||!o.im.isConnected||!o.im.naturalWidth)return;
-  // ukuran layout (offset*) tidak terpengaruh transform/rotasi lipatan; .h yang sedang disembunyikan (0) dilewati
-  const im=o.im,nw=im.naturalWidth,nh=im.naturalHeight,iw=im.offsetWidth,ih=im.offsetHeight;if(!iw||!ih)return;
-  const sc=Math.min(iw/nw,ih/nh),cw=nw*sc,ch=nh*sc,st=o.ov.style;
-  st.left=(im.offsetLeft+(im.__tx||0)+(iw-cw)/2)+'px';st.top=(im.offsetTop+(ih-ch)/2)+'px';
+  const hb=h.getBoundingClientRect(),ib=o.im.getBoundingClientRect(),nw=o.im.naturalWidth,nh=o.im.naturalHeight;
+  const sc=Math.min(ib.width/nw,ib.height/nh),cw=nw*sc,ch=nh*sc,st=o.ov.style;
+  st.left=(ib.left-hb.left+(ib.width-cw)/2)+'px';st.top=(ib.top-hb.top+(ib.height-ch)/2)+'px';
   st.width=cw+'px';st.height=ch+'px';
 }
 const ro=window.ResizeObserver?new ResizeObserver(es=>es.forEach(e=>place(e.target))):null;

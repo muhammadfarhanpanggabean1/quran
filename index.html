@@ -53,6 +53,17 @@ main{padding-bottom:env(safe-area-inset-bottom,0px)}
 .app small{color:var(--muted);font-size:13px}
 .app .ch{width:22px;height:22px;fill:var(--muted);flex:none}
 #panel .bar{padding-left:8px}
+.set{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg);border:1px solid var(--line);border-radius:14px;cursor:pointer;position:relative}
+.set:active{background:var(--line)}
+.set .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.set .tx i{font-style:normal;font-size:17px;font-weight:600}
+.set .tx small{color:var(--muted);font-size:13px}
+.set input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.set .tg{flex:none;width:48px;height:28px;border-radius:14px;background:var(--line);position:relative;transition:background .2s}
+.set .tg::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.35);transition:transform .2s}
+.set input:checked+.tg{background:var(--primary)}
+.set input:checked+.tg::after{transform:translateX(20px)}
+.set input:focus-visible+.tg{outline:2px solid var(--primary);outline-offset:2px}
 </style></head><body>
 <header>
   <div class="bar">
@@ -120,11 +131,14 @@ const APPS=[
  ['Catatan Hafalan','Catat dan pantau hafalan','https://quran144surat-create.github.io/Catatan-hafalan-versi-2/','M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z'],
  ['Kuis Murojaah','Uji dan ulang hafalan','https://quran144surat-create.github.io/Kuis-Murojaah-Versi-2/','M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z']];
 const appsHtml=APPS.map(a=>`<a class="app" href="${a[2]}" target="_blank" rel="noopener"><div class="ai"><svg viewBox="0 0 24 24"><path d="${a[3]}"/></svg></div><span><i>${a[0]}</i><small>${a[1]}</small></span>${chev}</a>`).join('');
+// Setelan: efek balik halaman mushaf (page curl). Dibaca mushaf.html lewat localStorage 'quran.curl'; bawaan aktif.
+const curlGet=()=>{try{return localStorage.getItem('quran.curl')!=='0'}catch(e){return true}};
+const setHtml='<label class="set"><span class="tx"><i>Efek balik halaman</i><small>Halaman melengkung seperti buku asli saat berpindah</small></span><input type="checkbox" id="curlsw" role="switch"><span class="tg"></span></label>';
 const menu=(on)=>{$('menu').classList.toggle('on',on);$('mscrim').classList.toggle('on',on)};
 $('mbtn').onclick=()=>menu(!$('menu').classList.contains('on'));
 $('mscrim').onclick=()=>menu(false);
 $('menu').onclick=e=>{const b=e.target.closest('button');if(!b)return;
-  menu(false);$('ptitle').textContent=b.dataset.m;$('pbody').innerHTML=b.dataset.m==='Aplikasi lainnya'?appsHtml:'';$('panel').classList.add('on');$('panel').setAttribute('aria-hidden','false')};
+  menu(false);$('ptitle').textContent=b.dataset.m;$('pbody').innerHTML=b.dataset.m==='Aplikasi lainnya'?appsHtml:b.dataset.m==='Setelan'?setHtml:'';if(b.dataset.m==='Setelan'){const sw=$('curlsw');sw.checked=curlGet();sw.onchange=()=>{try{localStorage.setItem('quran.curl',sw.checked?'1':'0')}catch(x){}}}$('panel').classList.add('on');$('panel').setAttribute('aria-hidden','false')};
 $('pback').onclick=()=>{$('panel').classList.remove('on');$('panel').setAttribute('aria-hidden','true')};
 $('last').onclick=()=>{let p=1;try{p=+localStorage.getItem('quran.last')||1}catch(e){}location.href=go(p)};
 $('list').addEventListener('click',e=>{
