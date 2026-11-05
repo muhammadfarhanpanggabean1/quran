@@ -104,14 +104,6 @@ html.l1 .h img,html.l1 .h.op img{display:block;width:100cqw;max-width:none;heigh
 #rfab.rec{background:#C0392B;border-color:#C0392B;box-shadow:0 0 0 calc(var(--lv,0)*10px) rgba(192,57,43,.35)}
 #rt{order:-1;flex:0 0 100%;text-align:center;font:600 13px system-ui,sans-serif;font-variant-numeric:tabular-nums;color:var(--ink)}
 #rtools{display:flex;gap:8px}
-/* Kecerahan dalam app: lapisan gelap di atas halaman saja (bilah, sheet, dan tombol tidak ikut redup) */
-#dim{position:fixed;inset:0;z-index:3;background:#000;opacity:0;pointer-events:none}
-#bhud{position:fixed;z-index:9;top:calc(14px + env(safe-area-inset-top,0px));left:50%;transform:translate(-50%,-6px);display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:99px;background:var(--ink);color:var(--bg);font:600 12.5px system-ui,sans-serif;font-variant-numeric:tabular-nums;direction:ltr;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}
-#bhud.on{opacity:1;transform:translate(-50%,0)}
-#bhud svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;flex:none}
-#bhv{min-width:34px;text-align:right}
-#bhb{position:relative;width:64px;height:4px;border-radius:2px;overflow:hidden;background:color-mix(in srgb,var(--bg) 30%,transparent)}
-#bhb::after{content:"";position:absolute;inset:0;width:var(--v,100%);border-radius:2px;background:var(--bg)}
 /* Pemutar rekaman: kartu tipis di bilah bawah; tetap tampil di halaman mana pun selama rekaman diputar */
 #rp{margin:8px 10px 0;padding:8px 10px 6px;display:grid;gap:2px;direction:ltr;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--ink) 5%,transparent)}
 #rp[hidden],body.pl #rp{display:none}
@@ -298,8 +290,6 @@ body.ui #bk{display:none}
   <button id="ago" disabled>Pilih juz dulu</button>
 </div></div>
 <div id="at" hidden role="status"></div>
-<div id="dim"></div>
-<div id="bhud" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg><span id="bhv">100%</span><i id="bhb"></i></div>
 <main id="track"></main>
 <button id="bk" aria-label="Kembali"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
 
@@ -1090,50 +1080,6 @@ $('rdel').onclick=async()=>{
 sync(cur);
 })();
 
-// Kecerahan dalam app: geser ke atas = lebih terang, ke bawah = lebih gelap (lapisan gelap di atas halaman).
-// Browser tidak boleh mengubah kecerahan layar perangkat, jadi ini meredupkan tampilan app saja. Disimpan terpisah untuk potret dan landscape.
-(()=>{
-  const dim=$('dim'),hud=$('bhud'),hv=$('bhv'),hb=$('bhb'),trk=$('track'),oq=matchMedia('(orientation:landscape)');
-  const MIN=.2,key=()=>'quran.br.'+(oq.matches?'l':'p');
-  let br=1,ht=0,mode=-1,pid=null,sx=0,sy=0,b0=1,until=0;
-  const paint=()=>{
-    dim.style.opacity=(1-br).toFixed(3);
-    hv.textContent=Math.round(br*100)+'%';
-    hb.style.setProperty('--v',((br-MIN)/(1-MIN)*100).toFixed(1)+'%');
-  };
-  const load=()=>{let v=1;try{const x=parseFloat(localStorage.getItem(key()));if(x>=MIN&&x<=1)v=x}catch(e){}br=v;paint()};
-  const save=()=>{try{localStorage.setItem(key(),br.toFixed(3))}catch(e){}};
-  const show=()=>{hud.classList.add('on');clearTimeout(ht);ht=setTimeout(()=>hud.classList.remove('on'),1000)};
-  trk.addEventListener('pointerdown',e=>{
-    if(e.pointerType==='mouse')return;
-    if(!e.isPrimary){mode=-1;return} // jari kedua (mis. cubit): batalkan
-    if(document.documentElement.classList.contains('l1')&&e.clientX>innerWidth*.14&&e.clientX<innerWidth*.86){mode=-1;pid=null;return}
-    pid=e.pointerId;sx=e.clientX;sy=e.clientY;b0=br;mode=0;
-  });
-  trk.addEventListener('pointermove',e=>{
-    if(e.pointerId!==pid||mode<0)return;
-    const dx=e.clientX-sx,dy=e.clientY-sy;
-    if(mode===0){
-      if(Math.abs(dx)<10&&Math.abs(dy)<10)return;
-      mode=Math.abs(dy)>Math.abs(dx)*1.4?2:-1; // 2 = geser vertikal (kecerahan); -1 = geser halaman, biarkan
-      if(mode!==2)return;
-      try{trk.setPointerCapture(e.pointerId)}catch(x){}
-    }
-    // satu rentang penuh (20%-100%) = geser setinggi 60% layar
-    br=Math.max(MIN,Math.min(1,b0-dy/(innerHeight*.6)*(1-MIN)));
-    paint();show();
-  });
-  const end=e=>{
-    if(e.pointerId!==pid)return;
-    if(mode===2){save();until=Date.now()+400}
-    mode=-1;pid=null;
-  };
-  trk.addEventListener('pointerup',end);trk.addEventListener('pointercancel',end);
-  // geser vertikal tidak ikut dihitung sebagai ketukan (menampilkan bilah / memutar ayat)
-  trk.addEventListener('click',e=>{if(Date.now()<until){e.stopPropagation();e.preventDefault()}},true);
-  oq.addEventListener('change',load);
-  load();
-})();
 
 // Sembunyikan/tampilkan halaman. Tahan tombol saat tersembunyi untuk mengintip. Status diingat.
 (()=>{
