@@ -390,20 +390,14 @@ const start=n=>spread?(n%2?n:n-1):n;
 // jadi zoom dari tengah memotong bingkai dan judul di satu sisi. Gambar digeser supaya bingkai + judul tepat di tengah layar.
 // CX = pusat bingkai + judul dalam piksel gambar (lebar asli 759): halaman ganjil / genap. Hanya untuk gambar baru (kelas op) di mode potret.
 const CX={odd:346,even:409};
-// Setelan "Teks diperbesar (Mode P)" di index.html: kunci quran.pz = 0 (mati) atau faktor 1.05-1.5. Hanya berlaku di mode potret.
-const pzGet=()=>{try{const v=parseFloat(localStorage.getItem('quran.pz'));return v>=1.05&&v<=1.5?v:1}catch(e){return 1}};
-const pzApply=()=>{document.documentElement.style.setProperty('--pz',pzGet());loaded.forEach(h=>{const im=h.querySelector('img');if(im&&im.complete)fitImg(h,im)})};
 function fitImg(h,im){
   if(!im.naturalWidth)return;
-  // Pergeseran hanya aktif saat teks diperbesar di mode P (quran.pz > 1): bingkai teks digeser ke tengah layar. Tanpa zoom, gambar utuh supaya tepi jilid tetap terlihat.
-  if(spread||mq.matches||!h.classList.contains('op')||pzGet()<=1){im.style.transform='';return}
+  if(true||spread||!h.classList.contains('op')){im.style.transform='';return} // pergeseran dimatikan: gambar utuh supaya tepi jilid kanan (hal. ganjil) / kiri (hal. genap) tetap terlihat
   const w=im.offsetWidth,cw=h.clientWidth,lim=Math.abs(w-cw)/2;
   let s=(im.naturalWidth/2-(+h.dataset.p%2?CX.odd:CX.even))*w/im.naturalWidth;
   s=Math.max(-lim,Math.min(lim,s)); // jangan sampai tepi gambar masuk ke layar (celah kosong)
   im.style.transform='translateX('+s.toFixed(1)+'px)';
 }
-addEventListener('storage',e=>{if(e.key==='quran.pz'||e.key===null)pzApply()});
-pzApply();
 addEventListener('resize',()=>loaded.forEach(h=>{const im=h.querySelector('img');if(im&&im.complete){fitImg(h,im);h.__o&&place(h)}}));
 // warna kertas mengikuti gambar: ambil dari pojok gambar, hitung hasil filter mode malam, lalu pakai untuk latar halaman
 function paperVars(c){const cl=v=>Math.max(0,Math.min(255,Math.round(v))),hx=a=>'#'+a.map(v=>cl(v).toString(16).padStart(2,'0')).join('');
