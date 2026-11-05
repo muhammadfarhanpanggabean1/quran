@@ -58,7 +58,7 @@ body.ui header,body.ui #bot{transform:none;opacity:1;pointer-events:auto}
 }
 @media(orientation:landscape){:root[data-theme=dark] .h::before{background-color:transparent;background-image:linear-gradient(90deg,transparent calc(50% - 9vh),rgba(0,0,0,.25) calc(50% - 1px),rgba(255,255,255,.28) calc(50% - 1px),rgba(255,255,255,.28) calc(50% + 1px),rgba(0,0,0,.45) calc(50% + 1px),transparent calc(50% + var(--sh)))}}
 /* HP landscape 1 halaman (bawaan): halaman memenuhi lebar layar sehingga tulisan besar, isi halaman digulir ke bawah. Kelas l1 dipasang di build(). Setelan "Mode 2 halaman di HP" (quran.hp2) mematikannya. */
-html.l1 .h{display:block;position:relative;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none;touch-action:pan-y pinch-zoom}
+html.l1 .h{display:block;position:relative;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;scrollbar-width:none;touch-action:pan-y pinch-zoom}
 html.l1 .h::-webkit-scrollbar{display:none}
 html.l1[data-curl="0"] .h{touch-action:pan-x pan-y pinch-zoom}
 /* #track (efek balik halaman aktif) hanya mengizinkan pinch-zoom, dan batasan itu ikut berlaku ke anaknya, jadi gulir vertikal di dalam halaman terblokir. Izinkan pan-y; geser horizontal tetap ditangani skrip/gulir track. */
@@ -595,8 +595,13 @@ track.addEventListener('pointermove',e=>{
   const D=cvD;if(!D||e.pointerId!==D.id)return;
   if(!D.m){
     const dx=e.clientX-D.x,dy=e.clientY-D.y;
-    if(Math.hypot(dx,dy)<10)return;
-    if(Math.abs(dx)<Math.abs(dy)*1.2){D.m=2;return}
+    // mode 1 halaman landscape: layar pendek, jadi geser vertikal sering agak miring; balik halaman hanya jika gerakan benar-benar mendatar
+    const l1=document.documentElement.classList.contains('l1'),ax=Math.abs(dx),ay=Math.abs(dy);
+    if(Math.hypot(dx,dy)<(l1?12:10))return;
+    if(l1){
+      if(ay>=ax*1.2){D.m=2;return}  // jelas vertikal: biarkan gulir halaman
+      if(ax<ay*1.8)return;          // masih ambigu: tunggu gerakan berikutnya, jangan putuskan dari sampel pertama
+    }else if(ax<ay*1.2){D.m=2;return}
     D.dir=dx>0?1:-1;
     if(!cvStart(D.dir,D.y,cvG(D.dir,D.x))){D.m=2;return}
     D.m=1;D.lx=e.clientX;D.lt=e.timeStamp;
