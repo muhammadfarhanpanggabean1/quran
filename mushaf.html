@@ -61,6 +61,9 @@ body.ui header,body.ui #bot{transform:none;opacity:1;pointer-events:auto}
 html.l1 .h{display:block;position:relative;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none;touch-action:pan-y pinch-zoom}
 html.l1 .h::-webkit-scrollbar{display:none}
 html.l1[data-curl="0"] .h{touch-action:pan-x pan-y pinch-zoom}
+/* #track (efek balik halaman aktif) hanya mengizinkan pinch-zoom, dan batasan itu ikut berlaku ke anaknya, jadi gulir vertikal di dalam halaman terblokir. Izinkan pan-y; geser horizontal tetap ditangani skrip/gulir track. */
+html.l1 #track{touch-action:pan-y pinch-zoom}
+html.l1[data-curl="0"] #track{touch-action:pan-x pan-y pinch-zoom}
 html.l1 .h::before,html.l1 .h::after{display:none}
 html.l1 .h img,html.l1 .h.op img{display:block;width:100cqw;max-width:none;height:auto;margin:0 auto}
 .msg{max-width:340px;padding:0 16px;direction:ltr}
