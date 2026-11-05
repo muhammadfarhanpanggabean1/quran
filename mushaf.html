@@ -1366,11 +1366,12 @@ var W={ctx:null,fail:false,act:false,paused:false,q:[],tEnd:0,sim:null,gen:0,top
 let sw=false; // sedang mengganti mesin: abaikan peristiwa jeda dari elemen audio
 function isPaused(){return W&&W.act?W.paused:A.paused}
 window.curlMurattal=()=>act&&!isPaused(); // dipakai suara balik halaman: diam hanya saat murattal benar-benar diputar
-// Uji/penyelamat: buka mushaf.html?wa=0 untuk mematikan mesin Web Audio (pakai pemutar audio biasa); ?wa=1 untuk menyalakan lagi.
-try{const q=new URLSearchParams(location.search).get('wa');if(q==='0')localStorage.setItem('quran.nowa','1');else if(q==='1')localStorage.removeItem('quran.nowa')}catch(e){}
+// Di Android mesin Web Audio mati secara bawaan: di HP Android suara qori tidak keluar lewat mesin ini (hanya derau penjaga sesi yang terdengar), jadi dipakai pemutar audio biasa.
+// Buka mushaf.html?wa=1 untuk memaksa menyalakannya, ?wa=0 untuk mematikannya di semua perangkat.
+try{const q=new URLSearchParams(location.search).get('wa');if(q==='0')localStorage.setItem('quran.nowa','1');else if(q==='1')localStorage.setItem('quran.nowa','0')}catch(e){}
 function waInit(){
   if(W.ctx||W.fail)return;
-  try{if(localStorage.getItem('quran.nowa')==='1'){W.fail=true;return}}catch(e){}
+  try{const f=localStorage.getItem('quran.nowa');if(f==='1'||(f!=='0'&&/Android/i.test(navigator.userAgent))){W.fail=true;return}}catch(e){}
   try{
     const AX=window.AudioContext||window.webkitAudioContext;if(!AX){W.fail=true;return}
     let c;try{c=new AX({latencyHint:'playback'})}catch(e){c=new AX()}
