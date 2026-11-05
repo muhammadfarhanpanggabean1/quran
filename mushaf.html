@@ -57,6 +57,12 @@ body.ui header,body.ui #bot{transform:none;opacity:1;pointer-events:auto}
 .h::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background-color:transparent;background-image:linear-gradient(90deg,transparent calc(50% - 9vh),rgba(0,0,0,.10) calc(50% - 1px),rgba(0,0,0,.45) calc(50% - 1px),rgba(0,0,0,.45) calc(50% + 1px),rgba(0,0,0,.20) calc(50% + 1px),transparent calc(50% + var(--sh)))}
 }
 @media(orientation:landscape){:root[data-theme=dark] .h::before{background-color:transparent;background-image:linear-gradient(90deg,transparent calc(50% - 9vh),rgba(0,0,0,.25) calc(50% - 1px),rgba(255,255,255,.28) calc(50% - 1px),rgba(255,255,255,.28) calc(50% + 1px),rgba(0,0,0,.45) calc(50% + 1px),transparent calc(50% + var(--sh)))}}
+/* HP landscape 1 halaman (bawaan): halaman memenuhi lebar layar sehingga tulisan besar, isi halaman digulir ke bawah. Kelas l1 dipasang di build(). Setelan "Mode 2 halaman di HP" (quran.hp2) mematikannya. */
+html.l1 .h{display:block;position:relative;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:none;touch-action:pan-y pinch-zoom}
+html.l1 .h::-webkit-scrollbar{display:none}
+html.l1[data-curl="0"] .h{touch-action:pan-x pan-y pinch-zoom}
+html.l1 .h::before,html.l1 .h::after{display:none}
+html.l1 .h img,html.l1 .h.op img{display:block;width:100cqw;max-width:none;height:auto;margin:0 auto}
 .msg{max-width:340px;padding:0 16px;direction:ltr}
 #homebtn{flex:none;padding:8px;display:grid;place-items:center;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none}
 #homebtn svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
@@ -380,8 +386,11 @@ function hlShow(k,p){
   hlT=setTimeout(t,150);
 }
 
-const track=$('track'),mq=matchMedia('(orientation:landscape)');
-let spread=mq.matches,cells={},loaded=new Set(),loadObs,curObs,rz=false,curUrl=null,ftgt=0;
+const track=$('track'),mq=matchMedia('(orientation:landscape)'),pq=matchMedia('(orientation:landscape) and (max-height:500px)');
+// HP landscape: bawaan 1 halaman (tulisan besar). Kalau setelan "Mode 2 halaman di HP" (quran.hp2) aktif, HP landscape tetap 2 halaman.
+const hp2=()=>{try{return localStorage.getItem('quran.hp2')==='1'}catch(e){return false}};
+const calcSpread=()=>mq.matches&&!(pq.matches&&!hp2());
+let spread=calcSpread(),cells={},loaded=new Set(),loadObs,curObs,rz=false,curUrl=null,ftgt=0;
 const start=n=>spread?(n%2?n:n-1):n;
 
 // Potret: bingkai gambar mushaf tidak di tengah (margin jilid sempit, margin luar lebar; ganjil dan genap bergantian),
@@ -414,8 +423,8 @@ try{const sp=JSON.parse(localStorage.getItem('quran.paper')||'null');if(sp&&sp.l
 function loadImg(h){
   if(h.dataset.done)return;h.dataset.done=1;loaded.add(h);const n=+h.dataset.p;
   const im=new Image();im.alt='Halaman '+n;im.addEventListener('load',()=>{samplePaper(im);im.style.setProperty('--ar',(im.naturalWidth/im.naturalHeight).toFixed(4));h.classList.toggle('op',im.naturalHeight<1500&&im.naturalWidth/im.naturalHeight>.66);fitImg(h,im);window.audOv&&audOv(h,im)});
-  im.onerror=()=>{if(!im.isConnected)return;h.innerHTML='<div class="msg">Gambar halaman '+n+' tidak ditemukan.<br>Yang dicari: <code dir="ltr">'+src(n)+'</code><br>Cocokkan nama folder dan file di repo dengan <code dir="ltr">config.js</code>, atau kalau sedang offline, halaman ini belum tersimpan di perangkat<br><br><button class="retry">Coba lagi</button></div>';h.querySelector('.retry').onclick=()=>{h.replaceChildren();delete h.dataset.done;loaded.delete(h);loadImg(h)}};
-  const u=src(n);try{if(new URL(u,location.href).origin!==location.origin)im.crossOrigin='anonymous'}catch(e){}
+  im.onerror=()=>{if(!im.isConnected)return;h.innerHTML='<div class="msg">Gambar halaman '+n+' tidak ditemukan.<br>Yang dicari: <code dir="ltr">'+src(n,spread?'L':'P')+'</code><br>Cocokkan nama folder dan file di repo dengan <code dir="ltr">config.js</code>, atau kalau sedang offline, halaman ini belum tersimpan di perangkat<br><br><button class="retry">Coba lagi</button></div>';h.querySelector('.retry').onclick=()=>{h.replaceChildren();delete h.dataset.done;loaded.delete(h);loadImg(h)}};
+  const u=src(n,spread?'L':'P');try{if(new URL(u,location.href).origin!==location.origin)im.crossOrigin='anonymous'}catch(e){}
   im.src=u;h.appendChild(im);
 }
 // buang gambar yang sudah jauh dari halaman aktif supaya memori tidak menumpuk
@@ -452,6 +461,7 @@ function setCur(n){
 }
 function goto(n,smooth){
   const c=cells[start(n)];
+  if(c&&!spread&&c!==cells[start(cur)]){const hh=c.querySelector('.h');if(hh)hh.scrollTop=0}
   if(curlGo(n,smooth))return;
   if(c)c.scrollIntoView({behavior:smooth?'smooth':'instant',inline:'center',block:'nearest'});
 }
@@ -490,6 +500,7 @@ function cvStart(dir,y,g){
   if(cvBusy)return false;
   const st=spread?2:1,c0=start(cur),t=c0+dir*st;
   if(t<1||t>T||!cells[c0]||!cells[t])return false;
+  if(!spread){const hh=cells[t].querySelector('.h');if(hh)hh.scrollTop=0}
   const r=track.getBoundingClientRect(),W=r.width,H=r.height,fw=dir>0;
   const mk=(cls,kid)=>{const d=document.createElement('div');d.className=cls;if(kid){const k=kid.cloneNode(true);k.querySelectorAll('img').forEach(i=>{i.decoding='sync'});d.appendChild(k)}return d};
   const el=document.createElement('div');el.id='curl';
@@ -497,6 +508,7 @@ function cvStart(dir,y,g){
   const top=cells[fw?c0:t],bk=spread?cells[fw?t:c0]:top;
   const under=mk('cu'),mid=mk('cm',top),cw=mk('cw'),flap=mk('cf'),cb=mk('cb'+(spread?' mir':''),bk),cg=mk('cg');
   flap.append(cb,cg);cw.append(flap);el.append(under,mid,cw);document.body.appendChild(el);
+  {const cs=(d,s)=>{const a=d.querySelector('.h'),b=s&&s.querySelector('.h');if(a&&b)a.scrollTop=b.scrollTop};cs(mid,top);cs(cb,bk)} // mode 1 halaman: salinan halaman ikut posisi gulir
   const cyT=y==null||y>H/2?H:0;
   CV={el,under,mid,cw,flap,cg,dir,t,c0,W,H,ws:spread?W/2:W,cy:cyT,cyT,fy:y==null?(cyT?H*.68:H*.32):y,p:0,g:g||0,auto:y==null,anim:0};
   cvBusy=1;cvDraw();
@@ -635,6 +647,7 @@ curlSync();
 // Urutan DOM = urutan baca Arab (direction:rtl): elemen pertama ada di paling KANAN.
 // Mode 2 halaman: ganjil di kanan, genap di kiri (1|2, 3|4, ...).
 function build(){
+  document.documentElement.classList.toggle('l1',mq.matches&&!spread);
   curlAbort();
   loadObs&&loadObs.disconnect();curObs&&curObs.disconnect();
   track.replaceChildren();cells={};loaded.clear();
@@ -655,7 +668,10 @@ function build(){
   requestAnimationFrame(()=>goto(cur,false));
 }
 build();
-mq.addEventListener('change',()=>{spread=mq.matches;build()});
+const reSpread=()=>{const s=calcSpread();if(s!==spread){spread=s;build()}else document.documentElement.classList.toggle('l1',mq.matches&&!spread)};
+mq.addEventListener('change',reSpread);pq.addEventListener('change',reSpread);
+addEventListener('storage',e=>{if(e.key==='quran.hp2'||e.key===null)reSpread()});
+addEventListener('pageshow',reSpread);
 // Ukuran layar berubah (fullscreen masuk/keluar, bilah sistem, rotasi): tahan pergantian halaman aktif sampai ukuran stabil, lalu ratakan ulang sekali
 let rt;const hold=()=>{rz=true;clearTimeout(rt);rt=setTimeout(()=>{goto(ftgt||cur,false);requestAnimationFrame(()=>{rz=false;
   // pergantian halaman yang tertahan selama rz tidak pernah dilaporkan observer: sinkronkan 'cur' dengan halaman di tengah layar
@@ -1091,6 +1107,7 @@ sync(cur);
   trk.addEventListener('pointerdown',e=>{
     if(e.pointerType==='mouse')return;
     if(!e.isPrimary){mode=-1;return} // jari kedua (mis. cubit): batalkan
+    if(document.documentElement.classList.contains('l1')&&e.clientX>innerWidth*.14&&e.clientX<innerWidth*.86){mode=-1;pid=null;return}
     pid=e.pointerId;sx=e.clientX;sy=e.clientY;b0=br;mode=0;
   });
   trk.addEventListener('pointermove',e=>{
@@ -1607,7 +1624,7 @@ function place(h){
   const o=h.__o;if(!o||!o.im.isConnected||!o.im.naturalWidth)return;
   const hb=h.getBoundingClientRect(),ib=o.im.getBoundingClientRect(),nw=o.im.naturalWidth,nh=o.im.naturalHeight;
   const sc=Math.min(ib.width/nw,ib.height/nh),cw=nw*sc,ch=nh*sc,st=o.ov.style;
-  st.left=(ib.left-hb.left+(ib.width-cw)/2)+'px';st.top=(ib.top-hb.top+(ib.height-ch)/2)+'px';
+  st.left=(ib.left-hb.left+h.scrollLeft+(ib.width-cw)/2)+'px';st.top=(ib.top-hb.top+h.scrollTop+(ib.height-ch)/2)+'px';
   st.width=cw+'px';st.height=ch+'px';
 }
 const ro=window.ResizeObserver?new ResizeObserver(es=>es.forEach(e=>place(e.target))):null;
