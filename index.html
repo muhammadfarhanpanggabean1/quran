@@ -65,6 +65,17 @@ main{padding-bottom:env(safe-area-inset-bottom,0px)}
 .set input:checked+.tg{background:var(--primary)}
 .set input:checked+.tg::after{transform:translateX(20px)}
 .set input:focus-visible+.tg{outline:2px solid var(--primary);outline-offset:2px}
+
+#xscrim{position:fixed;inset:0;z-index:59;background:rgba(0,0,0,.55);opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
+#xscrim.on{opacity:1;visibility:visible}
+#ext{position:fixed;left:0;right:0;bottom:0;top:max(64px,env(safe-area-inset-top,0px));z-index:60;display:flex;flex-direction:column;background:var(--surface);border-radius:22px 22px 0 0;overflow:hidden;box-shadow:0 -6px 28px rgba(0,0,0,.45);transform:translateY(100%);visibility:hidden;transition:transform .3s cubic-bezier(.2,.8,.2,1),visibility .3s}
+#ext.on{transform:none;visibility:visible}
+#ext .xh{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 12px 20px;background:var(--surface)}
+#ext .xh b{font:400 24px/1.2 Georgia,"Times New Roman",serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#xclose{flex:none;border:0;cursor:pointer;padding:10px 22px;border-radius:999px;background:var(--band);color:var(--ink);font:700 17px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#xclose:active{background:var(--line)}
+#ext iframe{flex:1;width:100%;border:0;background:var(--surface);display:none;padding-bottom:env(safe-area-inset-bottom,0px)}
+#ext iframe.on{display:block}
 </style></head><body>
 <header>
   <div class="bar">
@@ -85,6 +96,10 @@ main{padding-bottom:env(safe-area-inset-bottom,0px)}
   </div>
   <div id="pbody"></div>
 </section>
+<div id="xscrim"></div>
+<div id="ext" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="xh"><b id="xtitle"></b><button id="xclose" type="button">Tutup</button></div>
+</div>
 <main id="list"></main>
 <script src="config.js"></script>
 <script>
@@ -131,7 +146,7 @@ const chev='<svg class="ch" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 1
 const APPS=[
  ['Catatan Hafalan','Catat dan pantau hafalan','https://quran144surat-create.github.io/Catatan-hafalan-versi-2/','M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z'],
  ['Kuis Murojaah','Uji dan ulang hafalan','https://quran144surat-create.github.io/Kuis-Murojaah-Versi-2/','M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z']];
-const appsHtml=APPS.map(a=>`<a class="app" href="${a[2]}" target="_blank" rel="noopener"><div class="ai"><svg viewBox="0 0 24 24"><path d="${a[3]}"/></svg></div><span><i>${a[0]}</i><small>${a[1]}</small></span>${chev}</a>`).join('');
+const appsHtml=APPS.map(a=>`<a class="app" href="${a[2]}"><div class="ai"><svg viewBox="0 0 24 24"><path d="${a[3]}"/></svg></div><span><i>${a[0]}</i><small>${a[1]}</small></span>${chev}</a>`).join('');
 // Setelan: efek balik halaman mushaf (page curl). Dibaca mushaf.html lewat localStorage 'quran.curl'; bawaan aktif.
 const curlGet=()=>{try{return localStorage.getItem('quran.curl')!=='0'}catch(e){return true}};
 const hp2Get=()=>{try{return localStorage.getItem('quran.hp2')==='1'}catch(e){return false}};
@@ -148,6 +163,26 @@ $('last').onclick=()=>{let p=1;try{p=+localStorage.getItem('quran.last')||1}catc
 $('list').addEventListener('click',e=>{
   const d=e.target.closest('.del');if(!d)return;e.preventDefault();
   try{localStorage.setItem('quran.bm',JSON.stringify(bm().filter(p=>p!==+d.dataset.p)))}catch(x){}render()});
+
+// Aplikasi lain dibuka sebagai lembar di dalam app ini; "Tutup" kembali ke halaman utama.
+const ext=$('ext'),frames={};let xopen=false;
+function openExt(url,title){
+  if(!frames[url]){const f=document.createElement('iframe');f.src=url;f.title=title;
+    f.allow='fullscreen; autoplay; clipboard-write';ext.appendChild(f);frames[url]=f}
+  Object.values(frames).forEach(f=>f.classList.toggle('on',f===frames[url]));
+  $('xtitle').textContent=title;
+  ext.classList.add('on');$('xscrim').classList.add('on');ext.setAttribute('aria-hidden','false');
+  if(!xopen)history.pushState({ext:1},'');xopen=true}
+function closeExt(fromPop){
+  if(!xopen)return;xopen=false;
+  ext.classList.remove('on');$('xscrim').classList.remove('on');ext.setAttribute('aria-hidden','true');
+  $('panel').classList.remove('on');$('panel').setAttribute('aria-hidden','true'); // kembali ke halaman utama
+  if(!fromPop)history.back()}
+$('xclose').onclick=()=>closeExt(false);
+$('xscrim').onclick=()=>closeExt(false);
+addEventListener('popstate',()=>closeExt(true));
+$('pbody').addEventListener('click',e=>{const a=e.target.closest('a.app');if(!a)return;
+  e.preventDefault();openExt(a.getAttribute('href'),a.querySelector('i').textContent)});
 render();
 if(location.protocol.startsWith('http')&&navigator.serviceWorker)navigator.serviceWorker.register('sw.js');
 </script></body></html>
